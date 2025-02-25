@@ -1,1 +1,31 @@
-/* You can add global styles to this file, and also import other style files */
+@use '@angular/material' as mat;
+@include mat.core();
+
+@import '@angular/material/prebuilt-themes/deeppurple-amber.css';
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+
+.cdk-overlay-connected-position-bounding-box {
+    transform: none !important;
+    top: 70px !important;
+    left: 250px !important; 
+    width: auto !important;
+    height: auto !important;
+}
+
+.mat-mdc-menu-panel {
+    background-color: #1e293b !important;
+}
+
+.mat-mdc-menu-item {
+    color: white !important;
+
+    &:hover {
+        background-color: #334155 !important;
+    }
+}
+
+.mat-icon-no-color {
+    color: rgb(2, 152, 229) !important;
+}
