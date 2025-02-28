@@ -1,0 +1,77 @@
+<div class="main-container">
+  <form [formGroup]="productoForm" (ngSubmit)="onSubmit()" class="producto-form">
+    <mat-card>
+      <mat-card-title>Crear Producto</mat-card-title>
+      <mat-card-content>
+        <div class="form-group">
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre del Producto</mat-label>
+            <input matInput formControlName="nombre" placeholder="Ingrese el nombre">
+            <mat-error *ngIf="productoForm.get('nombre')?.invalid && productoForm.get('nombre')?.touched">
+              El nombre es obligatorio
+            </mat-error>
+          </mat-form-field>
+        </div>
+
+        <div class="form-group">
+          <mat-form-field appearance="outline">
+            <mat-label>Categoría</mat-label>
+            <mat-select formControlName="categoria">
+              <mat-option *ngFor="let categoria of categorias" [value]="categoria.id">
+                {{ categoria.nombre }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="productoForm.get('categoria')?.invalid && productoForm.get('categoria')?.touched">
+              La categoría es obligatoria
+            </mat-error>
+          </mat-form-field>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button mat-raised-button color="primary" type="submit" [disabled]="productoForm.invalid">
+          Guardar Producto
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </form>
+
+  <mat-card>
+    <mat-card-title>Lista de Productos</mat-card-title>
+    <mat-card-content>
+      <div class="filter-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Buscar por Nombre</mat-label>
+          <input matInput (keyup)="applyFilter($event)" placeholder="Ingrese el nombre">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Filtrar por Categoría</mat-label>
+          <mat-select (selectionChange)="filterByCategory($event.value)">
+            <mat-option value="">Todas</mat-option>
+            <mat-option *ngFor="let categoria of categorias" [value]="categoria.id">
+              {{ categoria.nombre }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+        <ng-container matColumnDef="nombre">
+          <th mat-header-cell *matHeaderCellDef> Nombre </th>
+          <td mat-cell *matCellDef="let producto"> {{ producto.nombre }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="categoriaNombre">
+          <th mat-header-cell *matHeaderCellDef> Categoría </th>
+          <td mat-cell *matCellDef="let producto"> {{ producto.categoriaNombre }} </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+
+      <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+    </mat-card-content>
+  </mat-card>
+</div>
