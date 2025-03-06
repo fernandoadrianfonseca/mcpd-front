@@ -8,83 +8,126 @@
     animation: fadeIn 0.8s ease-in-out; /* Transición para todo el contenedor */
   }
   
-  .producto-form {
-    width: 100%;
-    margin: auto;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-    padding: 5px 0px 30px;
-    display: flex; /* Esto permite usar justify-content y align-items */
-    justify-content: center; /* Lo centra horizontalmente */
-    align-items: center; /* Lo centra verticalmente si alguna vez lo necesitás */
-  }
+.producto-form {
+  width: 100%;
+  margin: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  padding: 5px 0px 30px;
+  display: flex; /* Esto permite usar justify-content y align-items */
+  justify-content: center; /* Lo centra horizontalmente */
+  align-items: center; /* Lo centra verticalmente si alguna vez lo necesitás */
+}
 
-  .producto-form mat-card {
-    width: 700px;
-  }
-  
-  mat-card {
-    margin-top: 20px;
-    border-radius: 12px;
-    padding: 30px;
-    background: #ffffff;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
-  }
-  
-  mat-card-title {
-    font-size: 26px;
-    font-weight: bold;
-    color: #1976d2;
-    text-align: center;
-    margin-bottom: 20px;
-  }
-  
-  mat-form-field {
-    width: 100%;
-  }
-  
-  mat-card-actions {
-    display: flex;
-    justify-content: flex-end;
-    padding-top: 20px;
-  }
-  
-  .filter-container {
-    display: flex;
-    gap: 20px; /* Espaciado entre los filtros */
-    margin-bottom: 20px;
-    flex-wrap: nowrap; /* Evita que se vayan para abajo */
-    justify-content: flex-start; /* Alineados a la izquierda */
-    align-items: center; /* Alineados verticalmente */
-  }
-  
-  button[mat-raised-button] {
-    padding: 10px 20px;
-    font-weight: bold;
-    border-radius: 8px;
-    transition: background-color 0.3s ease;
-  }
-  
-  button[mat-raised-button]:hover:not(:disabled) {
-    background: #1565c0;
-    color: #fff;
-    box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(-20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+.producto-form mat-card {
+  width: 700px;
+}
 
-  mat-select {
-    display: block;
-    position: relative;
-    z-index: 10000;
+mat-card {
+  margin-top: 20px;
+  border-radius: 12px;
+  padding: 30px;
+  background: #ffffff;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+mat-card-title {
+  font-size: 26px;
+  font-weight: bold;
+  color: #1976d2;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+mat-form-field {
+  width: 100%;
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 20px;
+  gap: 15px; /* ✅ Añade un espacio entre los botones */
+}
+
+.filter-container {
+  display: flex;
+  gap: 20px; /* Espaciado entre los filtros */
+  margin-bottom: 20px;
+  flex-wrap: nowrap; /* Evita que se vayan para abajo */
+  justify-content: flex-start; /* Alineados a la izquierda */
+  align-items: center; /* Alineados verticalmente */
+}
+
+button[mat-raised-button] {
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+
+button[mat-raised-button]:hover:not(:disabled) {
+  background: #1565c0;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+mat-select {
+  display: block;
+  position: relative;
+  z-index: 10000;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px; /* Agregamos margen inferior para que no quede cortada */
+}
+
+.mat-elevation-z8 {
+  border-radius: 12px; /* Redondeamos bordes */
+  overflow: hidden; /* Evita cortes en los bordes */
+}
+
+.mat-paginator {
+  margin-top: 10px; /* Espacio entre tabla y paginador */
+}
+
+/* Asegura que los encabezados y celdas tengan la misma alineación */
+th, td {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+/* Ajusta el padding de las celdas para mejor alineación */
+th.mat-header-cell, td.mat-cell {
+  padding: 12px 16px;
+}
+
+/* Agrega ancho uniforme a las columnas */
+th, td {
+  width: auto;
+}
+
+/* Ajuste de la columna de acciones para que los iconos no queden pegados */
+td.mat-cell:last-child {
+  text-align: center;
+  width: 120px; /* Ancho fijo para la columna de acciones */
+}
+
+/* Estilos para los iconos */
+button.mat-icon-button {
+  margin: 0 5px; /* Espaciado entre los botones */
+}

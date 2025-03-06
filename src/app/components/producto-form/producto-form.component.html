@@ -1,7 +1,7 @@
 <div class="main-container">
   <form [formGroup]="productoForm" (ngSubmit)="onSubmit()" class="producto-form">
     <mat-card>
-      <mat-card-title>Crear Producto</mat-card-title>
+      <mat-card-title>{{ productoEditando ? 'Editar Producto' : 'Crear Producto' }}</mat-card-title>
       <mat-card-content>
         <div class="form-group">
           <mat-form-field appearance="outline">
@@ -30,7 +30,10 @@
 
       <mat-card-actions>
         <button mat-raised-button color="primary" type="submit" [disabled]="productoForm.invalid">
-          Guardar Producto
+          {{ productoEditando ? 'Actualizar Producto' : 'Guardar Producto' }}
+        </button>
+        <button *ngIf="productoEditando" mat-raised-button color="warn" (click)="cancelarEdicion()">
+          Cancelar Edición
         </button>
       </mat-card-actions>
     </mat-card>
@@ -67,11 +70,22 @@
           <td mat-cell *matCellDef="let producto"> {{ producto.categoriaNombre }} </td>
         </ng-container>
 
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef> Acciones </th>
+          <td mat-cell *matCellDef="let producto">
+            <button mat-icon-button color="primary" (click)="editarProducto(producto)">
+              <mat-icon>edit</mat-icon>
+            </button>
+            <button mat-icon-button color="warn" (click)="eliminarProducto(producto.id)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
-
-      <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
+      <mat-paginator [pageSizeOptions]="[20, 40, 60]" [pageSize]="20" showFirstLastButtons></mat-paginator>
     </mat-card-content>
   </mat-card>
 </div>

@@ -1,0 +1,62 @@
+<div class="main-container">
+    <form [formGroup]="categoriaForm" (ngSubmit)="onSubmit()" class="categoria-form">
+      <mat-card>
+        <mat-card-title>{{ categoriaEditando ? 'Editar Categoría' : 'Crear Categoría' }}</mat-card-title>
+        <mat-card-content>
+          <div class="form-group">
+            <mat-form-field appearance="outline">
+              <mat-label>Nombre de la Categoría</mat-label>
+              <input matInput formControlName="nombre" placeholder="Ingrese el nombre">
+              <mat-error *ngIf="categoriaForm.get('nombre')?.invalid && categoriaForm.get('nombre')?.touched">
+                El nombre es obligatorio
+              </mat-error>
+            </mat-form-field>
+          </div>
+        </mat-card-content>
+  
+        <mat-card-actions>
+          <button mat-raised-button color="primary" type="submit" [disabled]="categoriaForm.invalid">
+            {{ categoriaEditando ? 'Actualizar Categoría' : 'Guardar Categoría' }}
+          </button>
+          <button *ngIf="categoriaEditando" mat-raised-button color="warn" (click)="cancelarEdicion()">
+            Cancelar Edición
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </form>
+  
+    <mat-card>
+      <mat-card-title>Lista de Categorías</mat-card-title>
+      <mat-card-content>
+        <div class="filter-container">
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar por Nombre</mat-label>
+            <input matInput (keyup)="applyFilter($event)" placeholder="Ingrese el nombre">
+          </mat-form-field>
+        </div>
+  
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef> Nombre </th>
+            <td mat-cell *matCellDef="let categoria"> {{ categoria.nombre }} </td>
+          </ng-container>
+  
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef> Acciones </th>
+            <td mat-cell *matCellDef="let categoria">
+              <button mat-icon-button color="primary" (click)="editarCategoria(categoria)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <!-- <button mat-icon-button color="warn" (click)="eliminarCategoria(categoria.id)">
+                <mat-icon>delete</mat-icon>
+              </button> -->
+            </td>
+          </ng-container>
+  
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+        <mat-paginator [pageSizeOptions]="[20, 40, 60]" [pageSize]="20" showFirstLastButtons></mat-paginator>
+      </mat-card-content>
+    </mat-card>
+  </div>

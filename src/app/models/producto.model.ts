@@ -1,7 +1,9 @@
+import { Categoria } from "./categoria.model";
+
 export class Producto {
   id?: number;
   nombre!: string;
-  categoria!: number;
+  categoria!: Categoria;
   categoriaNombre!: string;
 
   constructor(init?: Partial<Producto>) {
