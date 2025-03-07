@@ -18,8 +18,8 @@ export class RestService {
     return this.http.get<T>(`${this.apiUrl}/${endpoint}`).pipe(catchError(this.handleError));
   }
 
-  post<T>(endpoint: string, data: any): Observable<T> {
-    return this.http.post<T>(`${this.apiUrl}/${endpoint}`, data).pipe(catchError(this.handleError));
+  post<T>(endpoint: string, data: any, options: object = {}): Observable<T> {
+    return this.http.post<T>(`${this.apiUrl}/${endpoint}`, data, options).pipe(catchError(this.handleError));
   }
 
   put<T>(endpoint: string, data: any): Observable<T> {

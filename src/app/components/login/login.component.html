@@ -19,6 +19,11 @@
                         <input matInput formControlName="password" type="password" autocomplete="new-password">
                         <mat-icon matSuffix>lock</mat-icon>
                     </mat-form-field>
+            
+                    <div *ngIf="errorMessage" class="error-message">
+                        {{ errorMessage }}
+                    </div>
+            
                     <button mat-raised-button color="primary" type="submit" [disabled]="loginForm.invalid" class="full-width">
                         LOG IN
                     </button>
