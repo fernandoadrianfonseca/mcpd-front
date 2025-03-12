@@ -3,6 +3,7 @@ import { MaterialModule } from '../../modules/material/material.module';
 import { CommonModule } from '@angular/common';
 import { ProductoFormComponent } from '../producto-form/producto-form.component';
 import { CategoriaFormComponent } from '../categoria-form/categoria-form.component';
+import { StockFormComponent } from '../stock-form/stock-form.component';
 
 @Component({
   selector: 'app-main',
@@ -20,7 +21,7 @@ export class MainComponent {
       subItems: [
         { label: 'Categorías', icon: 'view_list', component: CategoriaFormComponent },
         { label: 'Productos', icon: 'category', component: ProductoFormComponent },
-        { label: 'Stock', icon: 'inventory', component: '' }
+        { label: 'Stock', icon: 'inventory', component: StockFormComponent }
       ],
     },
   ];
