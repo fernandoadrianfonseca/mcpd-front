@@ -30,12 +30,19 @@ export class LoginComponent {
       this.authService.login(username, password).subscribe({
         next: (usuario: Usuario) => {
           console.log('Autenticado:', usuario);
-          localStorage.setItem('usuario', JSON.stringify(usuario));
+          this.authService.saveLogin(usuario);
           this.router.navigate(['/main']);
         },
         error: (err) => {
           console.error('Error de login:', err);
-          this.errorMessage = 'Credenciales incorrectas.';
+          const errorMsg = err.message;
+          if (errorMsg.includes('ESE LEGAJO NO EXISTE O NO SE ENCUENTRA HABILITADO. CONSULTE CON INFORMÁTICA')) {
+            this.errorMessage = 'Legajo Inexistente';
+          } else if (errorMsg.includes('DATOS INCORRECTOS')) {
+            this.errorMessage = 'Credenciales Inválidas';
+          } else {
+            this.errorMessage = errorMsg;
+          }
         }
       });
     }

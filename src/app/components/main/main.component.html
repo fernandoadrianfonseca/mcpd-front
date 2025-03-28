@@ -13,6 +13,7 @@
             [matMenuTriggerFor]="menu"
             [matMenuTriggerData]="{ item: item }"
             class="menu-item"
+            (click)="setMenuTop(item.position)"
           >
             <mat-icon class="menu-icon">{{ item.icon }}</mat-icon>
             <strong>{{ item.label }}</strong>
@@ -31,6 +32,18 @@
           </mat-menu>
         </ng-container>
       </mat-nav-list>
+
+      <!-- ✅ Sección del Usuario Logueado -->
+      <div class="user-section">
+        <mat-icon class="user-icon">account_circle</mat-icon>
+        <div class="user-info">
+          <span class="user-name">{{ usuario?.nombre }}</span>
+          <button mat-icon-button color="warn" (click)="logout()" class="logout-button">
+            <mat-icon>exit_to_app</mat-icon>
+          </button>
+        </div>
+      </div>
+      
     </mat-sidenav>
 
     <mat-sidenav-content class="content">

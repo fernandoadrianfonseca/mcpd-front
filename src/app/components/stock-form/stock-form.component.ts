@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MaterialModule } from '../../modules/material/material.module';
@@ -12,7 +12,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
-import { FormControl } from '@angular/forms';
+import { MatSort } from '@angular/material/sort';
 
 @Component({
   selector: 'stock-form',
@@ -25,16 +25,15 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   categorias: Categoria[] = [];
   productos: Producto[] = [];
   stockItems: ProductosStock[] = [];
-  displayedColumns: string[] = ['categoriaNombre', 'productoNombre','cantidad', 'unidades', 'marca', 'modelo', 'detalle', 'numeroDeSerie', 'tipo', 'acciones'];
+  displayedColumns: string[] = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'unidades', 'tipo', 'marca', 'modelo', 'numeroDeSerie', 'acciones'];
   dataSource = new MatTableDataSource<ProductosStock>();
 
   stockEditando: ProductosStock | null = null;
-  categoriaControl = new FormControl('');
-  productoControl = new FormControl('');
   filteredCategorias!: Observable<Categoria[]>;
   filteredProductos!: Observable<Producto[]>;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
 
   constructor(
     private fb: FormBuilder,
@@ -59,7 +58,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
     this.categoriaService.getCategorias().subscribe(data => {
       this.categorias = data;
-      this.filteredCategorias = this.categoriaControl.valueChanges.pipe(
+      this.filteredCategorias = this.stockForm.controls['categoria'].valueChanges.pipe(
         startWith(''),
         map(value => this.filterList(value, this.categorias))
       );
@@ -68,7 +67,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     // Obtener productos
     this.productoService.getProductos().subscribe(data => {
       this.productos = data;
-      this.filteredProductos = this.productoControl.valueChanges.pipe(
+      this.filteredProductos = this.stockForm.controls['producto'].valueChanges.pipe(
         startWith(''),
         map(value => this.filterList(value, this.productos))
       );
@@ -82,7 +81,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   filterList(value: string | null, list: any[]): any[] {
-    const filterValue = (value ?? '').toLowerCase();
+    const filterValue = (typeof value === 'string' ? value.toLowerCase() : '');
     return list.filter(item => item.nombre.toLowerCase().includes(filterValue));
   }
 
@@ -90,15 +89,15 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   onCategoriaChange(event: any): void {
     const categoria: Categoria = event.option.value; 
     if (categoria) {
-      this.stockForm.controls['categoria'].setValue(categoria.id); 
+      this.stockForm.controls['categoria'].setValue(categoria); 
       this.stockForm.controls['producto'].enable();
-      this.filteredProductos = this.productoControl.valueChanges.pipe(
+      this.filteredProductos = this.stockForm.controls['producto'].valueChanges.pipe(
         startWith(''),
         map(value => this.filterList(value, this.productos.filter(prod => prod.categoria.id === categoria.id)))
       );
     } else {
       this.stockForm.controls['producto'].disable();
-      this.productoControl.setValue('');
+      this.stockForm.controls['producto'].setValue('');
     }
   }
 
@@ -106,7 +105,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   onProductoChange(event: any): void {
     const producto: Producto = event.option.value; 
     if (producto) {
-      this.stockForm.controls['producto'].setValue(producto.id); 
+      this.stockForm.controls['producto'].setValue(producto); 
     }
   }
 
@@ -167,6 +166,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       this.stockItems = data;
       this.dataSource.data = this.stockItems;
       this.updatePaginator();
+      this.dataSource.sort = this.sort; // ✅ Aseguramos que se asigne después de obtener datos
     });
   }
 
@@ -182,8 +182,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
     // Actualizar los valores en el formulario con el ID de la categoría y producto
     this.stockForm.patchValue({
-      categoria: categoria?.id || '',
-      producto: producto?.id || '',
+      categoria: categoria ? categoria : null,
+      producto: producto ? producto : null,
       cantidad: stock.cantidad,
       unidades: stock.unidades,
       tipo: stock.tipo,
@@ -201,21 +201,43 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       observaciones: stock.observaciones
     });
   
-    // **Forzar el cambio en los autocompletes**
+    // ✅ **Actualizar `mat-autocomplete` correctamente**
+    this.stockForm.controls['categoria'].setValue(categoria ? categoria as any : '');
+    this.stockForm.controls['producto'].setValue(producto ? producto as any : '');
+
+    // ✅ **Forzar actualización de productos**
     if (categoria) {
-      this.categoriaControl.setValue(categoria.nombre); 
-      this.onCategoriaChange({ option: { value: categoria.id } });
+      this.onCategoriaChange({ option: { value: categoria } });
     }
-  
-    if (producto) {
-      this.productoControl.setValue(producto.nombre);
-    }
+
+    // ✅ **Habilitar el campo producto**
+    this.stockForm.controls['producto'].enable();
+
   }
 
   /** ✅ Cancelar edición */
   cancelarEdicion(): void {
+    
     this.stockEditando = null;
     this.stockForm.reset();
+
+     // ✅ Limpia visualmente el campo de categoría y producto
+     this.stockForm.controls['categoria'].setValue('');
+     this.stockForm.controls['producto'].setValue('');
+
+    // ✅ Restablece los valores del formulario para evitar problemas con los validadores
+    this.stockForm.patchValue({
+      categoria: '',
+      producto: '',
+      cantidad: '',
+      unidades: '',
+      marca: '',
+      modelo: '',
+      detalle: '',
+      numeroDeSerie: '',
+      tipo: '',
+      observaciones: ''
+    });
     this.stockForm.controls['producto'].disable();
   }
 
@@ -245,5 +267,28 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
   displayProducto(producto?: Producto): string {
     return producto ? producto.nombre : '';
+  }
+
+  /** ✅ Filtrar por categoría */
+  filterByCategory(category: string): void {
+    this.dataSource.filterPredicate = (data, filter) => {
+      return category ? data.categoriaNombre === category : true;
+    };
+    this.dataSource.filter = category; // Activa el filtro
+  }
+
+  /** ✅ Filtrar por producto */
+  applyProductFilter(event: Event): void {
+    const filterValue = (event.target as HTMLInputElement).value.trim().toLowerCase();
+    this.dataSource.filterPredicate = (data, filter) => data.productoNombre.toLowerCase().includes(filter);
+    this.dataSource.filter = filterValue;
+  }
+
+  /** ✅ Filtrar por detalle */
+  applyDetailFilter(event: Event): void {
+    const filterValue = (event.target as HTMLInputElement).value.trim().toLowerCase();
+    this.dataSource.filterPredicate = (data, filter) =>
+      (data.detalle?.toLowerCase() || '').includes(filter);
+    this.dataSource.filter = filterValue;
   }
 }

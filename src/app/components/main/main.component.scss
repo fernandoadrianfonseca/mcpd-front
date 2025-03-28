@@ -8,7 +8,7 @@
       width: 250px;
       background-color: #031636;
       color: white;
-
+      
       .logo-container {
         padding: 10px;
         text-align: center;
@@ -25,6 +25,11 @@
           font-size: 1.1rem;
           color: white;
           width: 100%;
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+          padding: 12px 20px;
+          text-align: left;
 
           &:hover {
             background-color: #334155;
@@ -32,6 +37,56 @@
 
           .menu-icon {
             margin-right: 25px;
+          }
+        }
+      }
+
+      .user-section {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%; // 🔹 Se ajusta automáticamente al ancho del sidenav
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px;
+        background-color: #1e293b;
+        border-top: 1px solid #334155;
+        box-sizing: border-box; // 🔹 Evita desbordamiento
+        height: auto; // 🔹 Para que el contenido defina su altura
+        white-space: nowrap; // 🔹 Evita saltos de línea inesperados
+        gap: 10px; // 🔹 Asegura separación entre ícono y texto
+
+        .user-icon {
+          font-size: 30px;
+          color: white;
+          min-width: fit-content;
+          min-height: fit-content;
+        }
+
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+
+          .user-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            word-break: break-word; // 🔹 Permite que el nombre se divida en varias líneas si es muy largo
+            white-space: normal; // 🔹 Asegura que el texto se pueda envolver correctamente
+            max-width: 100%; // 🔹 Evita que se desborde fuera del contenedor
+            text-align: left; // 🔹 Asegura que el texto alineado quede bien dentro del contenedor
+          }
+
+          .logout-button {
+            background-color: transparent;
+            color: #e74c3c;
+            transition: color 0.3s;
+
+            &:hover {
+              color: #ff6b6b;
+            }
           }
         }
       }

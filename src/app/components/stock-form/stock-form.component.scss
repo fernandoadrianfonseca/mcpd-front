@@ -162,6 +162,13 @@
   td.mat-cell:first-child {
     text-align: left;
   }
-  
-  
+
+  .filter-container {
+    display: flex;
+    gap: 20px; /* Espaciado entre los filtros */
+    margin-bottom: 20px;
+    flex-wrap: nowrap; /* Evita que se vayan para abajo */
+    justify-content: flex-start; /* Alineados a la izquierda */
+    align-items: center; /* Alineados verticalmente */
+  }
   

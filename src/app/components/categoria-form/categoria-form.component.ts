@@ -6,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { MaterialModule } from '../../modules/material/material.module';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatSort } from '@angular/material/sort';
 
 @Component({
   selector: 'categoria-form',
@@ -22,6 +23,7 @@ export class CategoriaFormComponent implements OnInit {
   categoriaEditando: Categoria | null = null;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
 
   constructor(private fb: FormBuilder, private categoriaService: CategoriaService) {}
 
@@ -85,6 +87,7 @@ export class CategoriaFormComponent implements OnInit {
     this.categoriaService.getCategorias().subscribe(data => {
       this.categorias = data;
       this.dataSource.data = this.categorias;
+      this.dataSource.sort = this.sort; // ✅ Aseguramos que se asigne después de obtener datos
       this.updatePaginator(); // ✅ Agregamos función para actualizar paginador
     });
   }

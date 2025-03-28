@@ -1,0 +1,153 @@
+<div class="main-container">
+    <form [formGroup]="contribuyenteForm" (ngSubmit)="onSubmit()" class="contribuyente-form">
+      <mat-card>
+        <mat-card-title>{{ editando ? 'Editar Contribuyente' : 'Agregar Contribuyente' }}</mat-card-title>
+        <mat-card-content>
+
+          <div class="form-grid">
+
+            <!-- Apellido -->
+            <mat-form-field appearance="outline">
+              <mat-label>Apellido</mat-label>
+              <input matInput formControlName="apellido">
+            </mat-form-field>
+
+            <!-- Nombre -->
+            <mat-form-field appearance="outline">
+              <mat-label>Nombre</mat-label>
+              <input matInput formControlName="nombre">
+            </mat-form-field>
+
+            <!-- CUIT (exactamente 11 dígitos) -->
+            <mat-form-field appearance="outline">
+              <mat-label>CUIT</mat-label>
+              <input matInput type="number" formControlName="cuit">
+              <mat-error *ngIf="contribuyenteForm.get('cuit')?.hasError('required')">CUIT es obligatorio</mat-error>
+              <mat-error *ngIf="contribuyenteForm.get('cuit')?.hasError('pattern')">CUIT debe tener 11 dígitos</mat-error>
+              <mat-error *ngIf="contribuyenteForm.controls['cuit'].hasError('cuitExistente')">
+                Ya existe un contribuyente con este CUIT
+              </mat-error>
+            </mat-form-field>
+
+            <!-- Responsabilidad -->
+            <mat-form-field appearance="outline">
+              <mat-label>Responsabilidad</mat-label>
+              <mat-select formControlName="responsabilidad">
+                <mat-option value="C">Consumidor Final</mat-option>
+                <mat-option value="M">Monotributo</mat-option>
+                <mat-option value="E">Exento</mat-option>
+                <mat-option value="I">Responsable Inscripto</mat-option>
+                <mat-option value="D">NIF</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Sexo -->
+            <mat-form-field appearance="outline">
+              <mat-label>Sexo</mat-label>
+              <mat-select formControlName="sexo">
+                <mat-option value="M">Masculino</mat-option>
+                <mat-option value="F">Femenino</mat-option>
+                <mat-option value="S">Persona Jurídica</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Domicilio (obligatorio) -->
+            <mat-form-field appearance="outline">
+              <mat-label>Domicilio</mat-label>
+              <input matInput formControlName="domicilio">
+              <mat-error *ngIf="contribuyenteForm.get('domicilio')?.hasError('required')">Domicilio requerido</mat-error>
+            </mat-form-field>
+
+            <!-- Teléfono (obligatorio) -->
+            <mat-form-field appearance="outline">
+              <mat-label>Teléfono</mat-label>
+              <input matInput formControlName="telefono">
+              <mat-error *ngIf="contribuyenteForm.get('telefono')?.hasError('required')">Teléfono requerido</mat-error>
+            </mat-form-field>
+
+            <!-- Correo Electrónico -->
+            <mat-form-field appearance="outline">
+              <mat-label>Email</mat-label>
+              <input matInput formControlName="mail" type="email">
+            </mat-form-field>
+
+            <!-- Fecha de Nacimiento -->
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de Nacimiento</mat-label>
+              <input matInput formControlName="nacimiento" type="date">
+            </mat-form-field>
+
+          </div>
+
+        </mat-card-content>
+
+        <mat-card-actions>
+          <button mat-raised-button color="primary" type="submit" [disabled]="contribuyenteForm.invalid">
+            {{ editando ? 'Actualizar Contribuyente' : 'Agregar Contribuyente' }}
+          </button>
+          <button *ngIf="editando" mat-raised-button color="warn" (click)="cancelarEdicion()">
+            Cancelar Edición
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </form>
+
+    <!-- TABLA DE CONTRIBUYENTES -->
+    <mat-card>
+      <mat-card-title>Lista de Contribuyentes</mat-card-title>
+      <mat-card-content>
+
+        <div class="filter-container">
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar por CUIT</mat-label>
+            <input matInput (keyup)="applyFilter($event)" placeholder="Ingrese CUIT">
+          </mat-form-field>
+    
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar por Nombre Y Apellido</mat-label>
+            <input matInput (keyup)="applyFilter($event)" placeholder="Ingrese Nombre">
+          </mat-form-field>
+        </div>
+
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" matSort>
+          
+          <!-- CUIT -->
+          <ng-container matColumnDef="cuit">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> CUIT </th>
+            <td mat-cell *matCellDef="let contribuyente"> {{ contribuyente.cuit }} </td>
+          </ng-container>
+
+          <!-- Nombre -->
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Nombre Y Apellido </th>
+            <td mat-cell *matCellDef="let contribuyente"> {{ contribuyente.nombre }} </td>
+          </ng-container>
+
+          <!-- Responsabilidad -->
+          <ng-container matColumnDef="responsabilidad">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Responsabilidad </th>
+            <td mat-cell *matCellDef="let contribuyente"> {{ contribuyente.responsabilidad }} </td>
+          </ng-container>
+
+          <!-- Acciones -->
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef> Acciones </th>
+            <td mat-cell *matCellDef="let contribuyente">
+              <button mat-icon-button color="primary" (click)="editarContribuyente(contribuyente)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <!-- <button mat-icon-button color="warn" (click)="eliminarContribuyente(contribuyente.cuit)">
+                <mat-icon>delete</mat-icon>
+              </button> -->
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+
+        <mat-paginator [pageSizeOptions]="[20, 50, 100]" [pageSize]="20" showFirstLastButtons></mat-paginator>
+
+      </mat-card-content>
+    </mat-card>
+</div>

@@ -3,12 +3,16 @@
 
 @import '@angular/material/prebuilt-themes/deeppurple-amber.css';
 
+:root {
+    --menu-top: 70px;
+}
+
 html, body { height: 100%; }
 body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 .mat-mdc-menu-panel {
     position: absolute !important;
-    top: 70px !important;
+    top: var(--menu-top) !important; 
     left: 250px !important; 
 }
 
@@ -30,4 +34,38 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 
 .mat-icon-no-color {
     color: rgb(2, 152, 229) !important;
+}
+
+.mat-mdc-snack-bar-container {
+    &.snack-bar-success {
+      --mdc-snackbar-container-color: #198754;
+      --mat-mdc-snack-bar-button-color: #fff;
+      --mdc-snackbar-supporting-text-color: #fff;
+    }
+  
+    &.snack-bar-error {
+      --mdc-snackbar-container-color: #dc3545;
+      --mat-mdc-snack-bar-button-color: #fff;
+      --mdc-snackbar-supporting-text-color: #fff;
+    }
+}
+
+.snack-bar-custom {
+  min-width: 400px; /* Aumenta el ancho mínimo */
+  max-width: 600px; /* Define un máximo */
+  text-align: center; /* Centra el texto */
+}
+
+/* 🔹 Centrar solo el texto sin afectar el icono */
+.mat-sort-header-content {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-grow: 1; /* Permite que el texto ocupe todo el ancho */
+}
+
+/* 🔹 Posicionar el icono de ordenamiento sin afectar el centrado del texto */
+.mat-sort-header-arrow {
+    position: absolute !important; /* Lo saca del flujo del flexbox */
+    right: 0px; /* Ajusta la posición del icono */
 }

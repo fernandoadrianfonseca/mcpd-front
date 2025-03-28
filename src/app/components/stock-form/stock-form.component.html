@@ -9,9 +9,8 @@
             <!-- Categoría con búsqueda -->
             <mat-form-field appearance="outline">
                 <mat-label>Categoría</mat-label>
-                <input type="text" matInput [formControl]="categoriaControl" [matAutocomplete]="autoCategoria" placeholder="Buscar categoría...">
+                <input type="text" matInput formControlName="categoria" [matAutocomplete]="autoCategoria" placeholder="Buscar categoría...">
                 <mat-autocomplete #autoCategoria="matAutocomplete" [displayWith]="displayCategoria" (optionSelected)="onCategoriaChange($event)">
-                <mat-option value="">Todas</mat-option>
                 <mat-option *ngFor="let categoria of filteredCategorias | async" [value]="categoria">
                     {{ categoria.nombre }}
                 </mat-option>
@@ -21,7 +20,7 @@
             <!-- Producto con búsqueda -->
             <mat-form-field appearance="outline">
                 <mat-label>Producto</mat-label>
-                <input type="text" matInput [formControl]="productoControl" [matAutocomplete]="autoProducto" placeholder="Buscar producto..." [disabled]="stockForm.controls['producto'].disabled">
+                <input type="text" matInput formControlName="producto" [matAutocomplete]="autoProducto" placeholder="Buscar producto...">
                 <mat-autocomplete #autoProducto="matAutocomplete" [displayWith]="displayProducto" (optionSelected)="onProductoChange($event)">
                 <mat-option *ngFor="let producto of filteredProductos | async" [value]="producto">
                     {{ producto.nombre }}
@@ -29,15 +28,30 @@
                 </mat-autocomplete>
             </mat-form-field>
 
+            <!-- Detalle -->
+            <mat-form-field appearance="outline">
+              <mat-label>Detalle</mat-label>
+              <input matInput formControlName="detalle">
+            </mat-form-field>
+
             <!-- Cantidad -->
             <mat-form-field appearance="outline">
                 <mat-label>Cantidad</mat-label>
                 <input matInput type="number" formControlName="cantidad">
-              </mat-form-field>
+            </mat-form-field>
+
+             <!-- Tipo -->
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo</mat-label>
+              <mat-select formControlName="tipo">
+                <mat-option value="Insumos">Insumos</mat-option>
+                <mat-option value="Dotacion Fija">Dotación Fija</mat-option>
+              </mat-select>
+            </mat-form-field> 
   
             <!-- Unidades -->
             <mat-form-field appearance="outline">
-              <mat-label>Unidades</mat-label>
+              <mat-label>Unidades X Paquete (Si Corresponde)</mat-label>
               <input matInput type="number" formControlName="unidades">
             </mat-form-field>
 
@@ -49,35 +63,20 @@
     
             <!-- Modelo -->
             <mat-form-field appearance="outline">
-              <mat-label>Modelo</mat-label>
+              <mat-label>Modelo (Si Corresponde)</mat-label>
               <input matInput formControlName="modelo">
             </mat-form-field>
 
-            <!-- Detalle -->
-            <mat-form-field appearance="outline">
-              <mat-label>Detalle</mat-label>
-              <input matInput formControlName="detalle">
-            </mat-form-field>
-    
             <!-- Número de Serie -->
             <mat-form-field appearance="outline">
-              <mat-label>Número de Serie</mat-label>
+              <mat-label>Número de Serie (Si Corresponde)</mat-label>
               <input matInput formControlName="numeroDeSerie">
             </mat-form-field>
   
-            <!-- Tipo -->
-            <mat-form-field appearance="outline">
-              <mat-label>Tipo</mat-label>
-              <mat-select formControlName="tipo">
-                <mat-option value="Insumos">Insumos</mat-option>
-                <mat-option value="Dotacion Fija">Dotación Fija</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- Número de Serie -->
+            <!-- Observaciones -->
             <mat-form-field appearance="outline">
               <mat-label>Observaciones</mat-label>
-              <input matInput formControlName="Observaciones">
+              <input matInput formControlName="observaciones">
             </mat-form-field>
   
           </div>
@@ -99,60 +98,85 @@
     <mat-card>
       <mat-card-title>Lista de Stock</mat-card-title>
       <mat-card-content>
+
+        <div class="filter-container">
+          <!-- Filtro por Categoría -->
+          <mat-form-field appearance="outline">
+            <mat-label>Filtrar por Categoría</mat-label>
+            <mat-select (selectionChange)="filterByCategory($event.value)">
+              <mat-option value="">Todas</mat-option>
+              <mat-option *ngFor="let categoria of categorias" [value]="categoria.nombre">
+                {{ categoria.nombre }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+        
+          <!-- Filtro por Producto -->
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar Producto</mat-label>
+            <input matInput (keyup)="applyProductFilter($event)" placeholder="Ingrese nombre del producto">
+          </mat-form-field>
+        
+          <!-- Filtro por Detalle -->
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar Detalle</mat-label>
+            <input matInput (keyup)="applyDetailFilter($event)" placeholder="Ingrese detalles">
+          </mat-form-field>
+        </div>
   
-        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" matSort>
           
           <!-- Categoría -->
           <ng-container matColumnDef="categoriaNombre">
-            <th mat-header-cell *matHeaderCellDef> Categoría </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Categoría </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.categoriaNombre }} </td>
           </ng-container>
   
           <!-- Producto -->
           <ng-container matColumnDef="productoNombre">
-            <th mat-header-cell *matHeaderCellDef> Producto </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Producto </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.productoNombre }} </td>
+          </ng-container>
+
+          <!-- Tipo -->
+          <ng-container matColumnDef="detalle">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Detalle </th>
+            <td mat-cell *matCellDef="let stock"> {{ stock.detalle }} </td>
           </ng-container>
 
           <!-- Cantidad -->
           <ng-container matColumnDef="cantidad">
-            <th mat-header-cell *matHeaderCellDef> Cantidad </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Cantidad </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.cantidad }} </td>
           </ng-container>
   
           <!-- Unidades -->
           <ng-container matColumnDef="unidades">
-            <th mat-header-cell *matHeaderCellDef> Unidades </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Unidades </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.unidades }} </td>
           </ng-container>
   
           <!-- Marca -->
           <ng-container matColumnDef="marca">
-            <th mat-header-cell *matHeaderCellDef> Marca </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Marca </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.marca }} </td>
           </ng-container>
 
-          <!-- Tipo -->
+          <!-- Modelo -->
           <ng-container matColumnDef="modelo">
-            <th mat-header-cell *matHeaderCellDef> Modelo </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Modelo </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.modelo }} </td>
-          </ng-container>
-
-          <!-- Tipo -->
-          <ng-container matColumnDef="detalle">
-            <th mat-header-cell *matHeaderCellDef> Detalle </th>
-            <td mat-cell *matCellDef="let stock"> {{ stock.detalle }} </td>
           </ng-container>
 
           <!-- Numero De Serie -->
           <ng-container matColumnDef="numeroDeSerie">
-            <th mat-header-cell *matHeaderCellDef> Numero De Serie </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Numero De Serie </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.numeroDeSerie }} </td>
           </ng-container>
 
           <!-- Tipo -->
           <ng-container matColumnDef="tipo">
-            <th mat-header-cell *matHeaderCellDef> Tipo </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Tipo </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.tipo }} </td>
           </ng-container>
   

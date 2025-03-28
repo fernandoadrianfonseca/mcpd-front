@@ -7,6 +7,7 @@ import { CommonModule } from '@angular/common';
 import { MaterialModule } from '../../modules/material/material.module';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
+import { MatSort } from '@angular/material/sort';
 
 @Component({
   selector: 'producto-form',
@@ -24,6 +25,7 @@ export class ProductoFormComponent implements OnInit {
   productoEditando: Producto | null = null; // ✅ Variable para controlar edición
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
+  @ViewChild(MatSort) sort!: MatSort;
 
   constructor(private fb: FormBuilder, private productoService: ProductoService, private categoriaService: CategoriaService) {}
 
@@ -105,6 +107,7 @@ export class ProductoFormComponent implements OnInit {
     this.productoService.getProductos().subscribe(data => {
       this.productos = data;
       this.dataSource.data = this.productos;
+      this.dataSource.sort = this.sort; // ✅ Aseguramos que se asigne después de obtener datos
       this.updatePaginator(); // ✅ Agregamos función para actualizar paginador
     });
   }

@@ -1,0 +1,9 @@
+<div class="dialog-container">
+    <mat-icon class="dialog-icon">help_outline</mat-icon>
+    <p class="dialog-message">{{ data.message }}</p>
+  
+    <div class="dialog-actions">
+      <button mat-button color="warn" (click)="confirm()">Sí</button>
+      <button mat-button (click)="cancel()">No</button>
+    </div>
+</div>
