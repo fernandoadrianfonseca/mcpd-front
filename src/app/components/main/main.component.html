@@ -7,29 +7,44 @@
       <mat-divider></mat-divider>
       <mat-nav-list>
         <ng-container *ngFor="let item of menuItems">
-          
-          <button
-            mat-button
-            [matMenuTriggerFor]="menu"
-            [matMenuTriggerData]="{ item: item }"
-            class="menu-item"
-            (click)="setMenuTop(item.position)"
-          >
-            <mat-icon class="menu-icon">{{ item.icon }}</mat-icon>
-            <strong>{{ item.label }}</strong>
-          </button>
-
-          <mat-menu #menu="matMenu" [xPosition]="'after'" [yPosition]="'above'" [overlapTrigger]="false">
-            <ng-container *ngFor="let subItem of item.subItems">
+          <ng-container *ngIf="canView(item)">
+            <ng-container *ngIf="item.subItems; else simpleItem">
               <button
-                mat-menu-item
-                (click)="selectComponent(subItem.component)"
+                mat-button
+                [matMenuTriggerFor]="menu"
+                [matMenuTriggerData]="{ item: item }"
+                class="menu-item"
+                (click)="setMenuTop(item.position)"
               >
-                <mat-icon class="submenu-icon">{{ subItem.icon }}</mat-icon>
-                {{ subItem.label }}
+                <mat-icon class="menu-icon">{{ item.icon }}</mat-icon>
+                <strong>{{ item.label }}</strong>
               </button>
+
+              <mat-menu #menu="matMenu" [xPosition]="'after'" [yPosition]="'above'" [overlapTrigger]="false">
+                <ng-container *ngFor="let subItem of item.subItems">
+                  <button
+                    mat-menu-item
+                    (click)="selectComponent(subItem.component)"
+                  >
+                    <mat-icon class="submenu-icon">{{ subItem.icon }}</mat-icon>
+                    {{ subItem.label }}
+                  </button>
+                </ng-container>
+              </mat-menu>
             </ng-container>
-          </mat-menu>
+
+            <ng-template #simpleItem>
+              <!-- Sin submenú (como Proveedores) -->
+              <button
+                mat-button
+                class="menu-item"
+                (click)="selectComponent(item.component); setMenuTop(item.position)"
+              >
+                <mat-icon class="menu-icon">{{ item.icon }}</mat-icon>
+                <strong>{{ item.label }}</strong>
+              </button>
+            </ng-template>
+          </ng-container>  
         </ng-container>
       </mat-nav-list>
 

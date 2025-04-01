@@ -24,4 +24,8 @@ export class StockService {
   eliminarStock(id: number | string): Observable<void> {
     return this.restService.delete<void>(`stock/${id}`);
   }
+
+  showSuccessMessage(message: string, duration: number){
+    this.restService.showMessage(message, 'success', duration*1000, 'top', false);
+  }
 }

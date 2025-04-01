@@ -7,6 +7,7 @@ import { MaterialModule } from '../../modules/material/material.module';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
+import { DialogService } from '../../services/dialog/dialog.service';
 
 @Component({
   selector: 'app-contribuyente-form',
@@ -24,7 +25,9 @@ export class ContribuyenteFormComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  constructor(private fb: FormBuilder, private contribuyenteService: ContribuyenteService) {}
+  constructor(private fb: FormBuilder,
+                private contribuyenteService: ContribuyenteService,
+                  private dialogService: DialogService) {}
 
   ngOnInit(): void {
     this.contribuyenteForm = this.fb.group({
@@ -87,13 +90,13 @@ export class ContribuyenteFormComponent implements OnInit {
       if (this.editando) {
         // ✅ Usa el `cuit` para actualizar correctamente
         this.contribuyenteService.actualizarContribuyente(contribuyente.cuit, contribuyente).subscribe(() => {
-          alert('Contribuyente actualizado con éxito');
+          this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + contribuyente.cuit + ' Actualizado Con Éxito', 5);
           this.loadContribuyentes();
           this.cancelarEdicion();
         });
       } else {
         this.contribuyenteService.crearContribuyente(contribuyente).subscribe(() => {
-          alert('Contribuyente agregado con éxito');
+          this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + contribuyente.cuit + ' Agregado Con Éxito', 5);
           this.loadContribuyentes();
           this.cancelarEdicion();
         });
@@ -126,12 +129,14 @@ export class ContribuyenteFormComponent implements OnInit {
   }
 
   eliminarContribuyente(cuit: number): void {
-    if (confirm('¿Seguro que quieres eliminar este contribuyente?')) {
-      this.contribuyenteService.eliminarContribuyente(cuit).subscribe(() => {
-        alert('Contribuyente eliminado con éxito');
-        this.loadContribuyentes();
-      });
-    }
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar El Contribuyente CUIT ' + cuit + '?').subscribe(result => {
+      if (result) {
+        this.contribuyenteService.eliminarContribuyente(cuit).subscribe(() => {
+          this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + cuit + ' Eliminado Con Éxito', 5);
+          this.loadContribuyentes();
+        });
+      }
+    });
   }
 
   updatePaginator(): void {

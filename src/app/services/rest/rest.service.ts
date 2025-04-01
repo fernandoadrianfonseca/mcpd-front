@@ -4,7 +4,7 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ConfigService } from '../config/config.service';
 import { ErrorHandlerService } from '../error-handler/error-handler.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatSnackBar, MatSnackBarVerticalPosition } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 
 @Injectable({
@@ -78,22 +78,24 @@ export class RestService {
 
     // Mostrar snackbar y overlay
     if (!skipErrorHandler && !this.errorHandler.isErrorDisplayed) {
-      this.showErrorMessage(`${operation}: ${parsedErrorMessage} ${errorMessage}`, 'error');
+      this.showMessage(`${operation}: ${parsedErrorMessage} ${errorMessage}`, 'error', 1000000, 'top', true);
       this.errorHandler.showError(parsedErrorMessage + ' ' + errorMessage);
     }
     
     return throwError(() => new Error(parsedErrorMessage + ' ' + errorMessage));
   }
 
-  private showErrorMessage(message: string, type: 'success' | 'error') {
+  public showMessage(message: string, type: 'success' | 'error', duration: number, position: MatSnackBarVerticalPosition, goToMain: boolean) {
     this.snackBar.open(message, 'Cerrar', {
-      duration: 1000000,
-      verticalPosition: 'top',
+      duration: duration,
+      verticalPosition: position,
       horizontalPosition: 'center',
       panelClass: ['snack-bar-custom', type === 'success' ? 'snack-bar-success' : 'snack-bar-error']
     }).afterDismissed().subscribe(() => {
-      this.errorHandler.clearError();
-      this.router.navigate(['/']);
+      if(goToMain){
+        this.errorHandler.clearError();
+        this.router.navigate(['/']);
+      }
     });
   }
 }

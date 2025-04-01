@@ -15,6 +15,7 @@ export class AuthService {
   private readonly endpoint = 'auth/login';
   private readonly sessionKey = 'sessionId';
   private currentSessionId: string | null = null;
+  private currentUser: string | null = null;
 
   constructor(private restService: RestService,
               private router: Router,
@@ -23,15 +24,24 @@ export class AuthService {
 
     // ✅ Guardar la sesión actual al iniciar
     this.currentSessionId = this.getSessionId();
+    this.currentUser = this.getUser();
 
     // ✅ Detectar cambios en la sesión (para cuando se inicie sesión en otra pestaña)
     window.addEventListener('storage', (event) => {
       if (event.key === this.sessionKey) {
-        const newSessionId = localStorage.getItem(this.sessionKey);
+        let newSessionId = localStorage.getItem(this.sessionKey);
+        let user = localStorage.getItem('usuario');
+        if(newSessionId==null && this.currentSessionId!=null){
+          newSessionId=this.currentSessionId;
+        }
+        if(user==null && this.currentUser!=null){
+          user=this.currentUser;
+          localStorage.setItem('usuario', user);
+        }
         if (this.currentSessionId && newSessionId !== this.currentSessionId && this.router.url != '/') {
           console.log('Otra pestaña inició sesión. Redirigiendo al login...');
           this.router.navigate(['/']);
-          this.showErrorMessage('Sesion cerrada: Se abrio la aplicacion en otra pestaña', 'error');
+          this.showSuccessMessage('Sesion cerrada: Se abrio la aplicacion en otra pestaña', 10000000);
         }
       }
     });
@@ -72,9 +82,25 @@ export class AuthService {
     this.currentSessionId = null;
   }
 
+  initUnloadListener() {
+    window.addEventListener('beforeunload', () => {
+      this.clean();
+    });
+  }
+
   /** ✅ Obtener ID de sesión actual */
   getSessionId(): string | null {
     return localStorage.getItem(this.sessionKey);
+  }
+
+  getUser(): string | null {
+    return localStorage.getItem('usuario');
+  }
+
+  modificarPassword(usuario: string, password: string): Observable<void> {
+    return this.restService.post<void>('auth/modificar', null, {
+      params: { usuario, password }
+    });
   }
 
   /** ✅ Generar un identificador único de sesión */
@@ -82,12 +108,11 @@ export class AuthService {
     return Math.random().toString(36).substring(2);
   }
 
-  private showErrorMessage(message: string, type: 'success' | 'error') {
-    this.snackBar.open(message, 'Cerrar', {
-      duration: 1000000,
-      verticalPosition: 'top',
-      horizontalPosition: 'center',
-      panelClass: ['snack-bar-custom', type === 'success' ? 'snack-bar-success' : 'snack-bar-error']
-    });
+  showSuccessMessage(message: string, duration: number){
+    this.restService.showMessage(message, 'success', duration*1000, 'top', false);
+  }
+
+  showErrorMessage(message: string, duration: number){
+    this.restService.showMessage(message, 'error', duration*1000, 'top', false);
   }
 }

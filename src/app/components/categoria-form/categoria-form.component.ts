@@ -7,6 +7,7 @@ import { MaterialModule } from '../../modules/material/material.module';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
+import { DialogService } from '../../services/dialog/dialog.service';
 
 @Component({
   selector: 'categoria-form',
@@ -25,7 +26,9 @@ export class CategoriaFormComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  constructor(private fb: FormBuilder, private categoriaService: CategoriaService) {}
+  constructor(private fb: FormBuilder,
+               private categoriaService: CategoriaService,
+                private dialogService: DialogService) {}
 
   ngOnInit(): void {
     this.categoriaForm = this.fb.group({
@@ -48,13 +51,13 @@ export class CategoriaFormComponent implements OnInit {
 
       if (this.categoriaEditando) {
         this.categoriaService.actualizarCategoria(categoria.id!, categoria).subscribe(() => {
-          alert('Categoría actualizada con éxito');
+          this.categoriaService.showSuccessMessage('Categoría Actualizada Con Éxito', 5);
           this.cancelarEdicion();
           this.loadCategorias();
         });
       } else {
         this.categoriaService.crearCategoria(categoria).subscribe(() => {
-          alert('Categoría guardada con éxito');
+          this.categoriaService.showSuccessMessage('Categoría Guardada Con Éxito', 5);
           this.cancelarEdicion();
           this.loadCategorias();
         });
@@ -75,12 +78,14 @@ export class CategoriaFormComponent implements OnInit {
   }
 
   eliminarCategoria(id: number): void {
-    if (confirm('¿Seguro que quieres eliminar esta categoría?')) {
-      this.categoriaService.eliminarCategoria(id).subscribe(() => {
-        alert('Categoría eliminada con éxito');
-        this.loadCategorias();
-      });
-    }
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar Esta Categoría?').subscribe(result => {
+      if (result) {
+        this.categoriaService.eliminarCategoria(id).subscribe(() => {
+          this.categoriaService.showSuccessMessage('Categoría Eliminada Con Éxito', 5);
+          this.loadCategorias();
+        });
+      }
+    });
   }
 
   loadCategorias(): void {

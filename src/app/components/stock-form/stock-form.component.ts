@@ -13,6 +13,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { MatSort } from '@angular/material/sort';
+import { DialogService } from '../../services/dialog/dialog.service';
 
 @Component({
   selector: 'stock-form',
@@ -39,7 +40,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     private fb: FormBuilder,
     private stockService: StockService,
     private categoriaService: CategoriaService,
-    private productoService: ProductoService
+    private productoService: ProductoService,
+    private dialogService: DialogService
   ) {}
 
   ngOnInit(): void {
@@ -146,13 +148,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
       if (this.stockEditando) {
         this.stockService.actualizarStock(stock.id!, stock).subscribe(() => {
-          alert('Stock actualizado con éxito');
+          this.stockService.showSuccessMessage('Stock actualizado con éxito', 5);
           this.cancelarEdicion();
           this.loadStock();
         });
       } else {
         this.stockService.crearStock(stock).subscribe(() => {
-          alert('Stock guardado con éxito');
+          this.stockService.showSuccessMessage('Stock guardado con éxito', 5);
           this.cancelarEdicion();
           this.loadStock();
         });
@@ -243,12 +245,14 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
   /** ✅ Eliminar un stock */
   eliminarStock(id: number): void {
-    if (confirm('¿Seguro que quieres eliminar este stock?')) {
-      this.stockService.eliminarStock(id).subscribe(() => {
-        alert('Stock eliminado con éxito');
-        this.loadStock();
-      });
-    }
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar Este Stock?').subscribe(result => {
+      if (result) {
+        this.stockService.eliminarStock(id).subscribe(() => {
+          this.stockService.showSuccessMessage('Stock Eliminado Con Éxito', 5);
+          this.loadStock();
+        });
+      }
+    });
   }
 
   /** ✅ Actualiza el paginador */

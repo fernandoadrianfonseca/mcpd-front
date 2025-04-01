@@ -1,0 +1,97 @@
+<div class="main-container">
+    <form [formGroup]="proveedorForm" (ngSubmit)="onSubmit()" class="proveedor-form">
+      <mat-card>
+        <mat-card-title>{{ editando ? 'Editar Proveedor' : 'Agregar Proveedor' }}</mat-card-title>
+        <mat-card-content>
+          <div class="form-grid">
+  
+            <!-- CUIT -->
+            <mat-form-field appearance="outline">
+              <mat-label>CUIT</mat-label>
+              <input matInput type="number" formControlName="cuit">
+              <mat-error *ngIf="proveedorForm.get('cuit')?.hasError('required')">CUIT es obligatorio</mat-error>
+              <mat-error *ngIf="proveedorForm.get('cuit')?.hasError('pattern')">CUIT debe tener 11 dígitos</mat-error>
+              <mat-error *ngIf="proveedorForm.get('cuit')?.hasError('cuitInexistente')">
+                CUIT no corresponde a ningún contribuyente
+              </mat-error>
+              <mat-error *ngIf="proveedorForm.get('cuit')?.hasError('cuitDuplicado')">
+                Ya existe un proveedor con ese CUIT
+              </mat-error>
+            </mat-form-field>
+  
+            <!-- Nombre Fantasía -->
+            <mat-form-field appearance="outline">
+              <mat-label>Nombre Fantasía</mat-label>
+              <input matInput formControlName="nombreFantasia">
+              <mat-error *ngIf="proveedorForm.get('nombreFantasia')?.hasError('required')">Campo obligatorio</mat-error>
+            </mat-form-field>
+  
+          </div>
+        </mat-card-content>
+  
+        <mat-card-actions>
+          <button mat-raised-button color="primary" type="submit" [disabled]="proveedorForm.invalid">
+            {{ editando ? 'Actualizar Proveedor' : 'Agregar Proveedor' }}
+          </button>
+          <button *ngIf="editando" mat-raised-button color="warn" (click)="cancelarEdicion()">Cancelar Edición</button>
+        </mat-card-actions>
+      </mat-card>
+    </form>
+  
+    <!-- LISTADO -->
+    <mat-card>
+      <mat-card-title>Lista de Proveedores</mat-card-title>
+      <mat-card-content>
+  
+        <div class="filter-container">
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar por CUIT</mat-label>
+            <input matInput (keyup)="applyFilter($event, 'cuit')" placeholder="Ingrese CUIT">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar por Nombre</mat-label>
+            <input matInput (keyup)="applyFilter($event, 'nombre')" placeholder="Ingrese Nombre">
+          </mat-form-field>
+  
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar por Fantasía</mat-label>
+            <input matInput (keyup)="applyFilter($event, 'nombreFantasia')" placeholder="Ingrese Fantasia">
+          </mat-form-field>
+        </div>
+  
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" matSort>
+  
+          <ng-container matColumnDef="cuit">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>CUIT</th>
+            <td mat-cell *matCellDef="let proveedor">{{ proveedor.cuit }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="nombre">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Nombre</th>
+            <td mat-cell *matCellDef="let proveedor">{{ proveedor.nombre }}</td>
+          </ng-container>
+  
+          <ng-container matColumnDef="fantasia">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Fantasía</th>
+            <td mat-cell *matCellDef="let proveedor">{{ proveedor.nombreFantasia }}</td>
+          </ng-container>
+  
+          <ng-container matColumnDef="acciones">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let proveedor">
+              <button mat-icon-button color="primary" (click)="editarProveedor(proveedor)">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+  
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+  
+        <mat-paginator [pageSizeOptions]="[20, 50, 100]" [pageSize]="20" showFirstLastButtons></mat-paginator>
+      </mat-card-content>
+    </mat-card>
+  </div>
+  

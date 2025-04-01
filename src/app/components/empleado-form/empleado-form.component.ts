@@ -9,6 +9,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { ContribuyenteService } from '../../services/rest/contribuyente/contribuyente.service';
 import { Contribuyente } from '../../models/contribuyente.model';
+import { DialogService } from '../../services/dialog/dialog.service';
 
 @Component({
   selector: 'app-empleado-form',
@@ -34,7 +35,10 @@ export class EmpleadoFormComponent implements OnInit {
     "Tesoreria", "Compras"
   ];
 
-  constructor(private fb: FormBuilder, private empleadoService: EmpleadoService, private contribuyenteService: ContribuyenteService) {}
+  constructor(private fb: FormBuilder,
+               private empleadoService: EmpleadoService,
+                private contribuyenteService: ContribuyenteService,
+                  private dialogService: DialogService) {}
 
   ngOnInit(): void {
     this.empleadoForm = this.fb.group({
@@ -120,13 +124,13 @@ export class EmpleadoFormComponent implements OnInit {
   
       if (this.editando) {
         this.empleadoService.actualizarEmpleado(empleado.legajo, empleado).subscribe(() => {
-          alert('Empleado actualizado con éxito');
+          this.empleadoService.showSuccessMessage('Empleado Legajo ' + empleado.legajo +' Actualizado Con Éxito', 5);
           this.loadEmpleados();
           this.cancelarEdicion();
         });
       } else {
         this.empleadoService.crearEmpleado(empleado).subscribe(() => {
-          alert('Empleado agregado con éxito');
+          this.empleadoService.showSuccessMessage('Empleado Legajo ' + empleado.legajo + ' Agregado Con Éxito', 5);
           this.loadEmpleados();
           this.cancelarEdicion();
         });
@@ -149,12 +153,26 @@ export class EmpleadoFormComponent implements OnInit {
   }
 
   eliminarEmpleado(legajo: number): void {
-    if (confirm('¿Seguro que quieres eliminar este empleado?')) {
-      this.empleadoService.eliminarEmpleado(legajo).subscribe(() => {
-        alert('Empleado eliminado con éxito');
-        this.loadEmpleados();
+
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar El Empleado Legajo ' + legajo + '?').subscribe(result => {
+      if (result) {
+        this.empleadoService.eliminarEmpleado(legajo).subscribe(() => {
+          this.empleadoService.showSuccessMessage('Empleado Legajo ' + legajo + ' Eliminado Con Éxito', 5);
+          this.loadEmpleados();
+        });
+      }
+    });
+  }
+
+  confirmarBlanqueo(empleado: Empleado): void {
+    this.dialogService.confirm(`¿Está Seguro Que desea Blanquear El Password Del Empleado Con Legajo ${empleado.legajo}?`)
+      .subscribe(result => {
+        if (result) {
+          this.empleadoService.blanquearPassword(empleado.legajo).subscribe(() => {
+            this.empleadoService.showSuccessMessage(`Password Del Empleado Legajo ${empleado.legajo} Blanqueado Con Éxito`, 5);
+          });
+        }
       });
-    }
   }
 
   updatePaginator(): void {

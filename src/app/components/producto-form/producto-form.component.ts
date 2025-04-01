@@ -8,6 +8,7 @@ import { MaterialModule } from '../../modules/material/material.module';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
+import { DialogService } from '../../services/dialog/dialog.service';
 
 @Component({
   selector: 'producto-form',
@@ -27,7 +28,10 @@ export class ProductoFormComponent implements OnInit {
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
 
-  constructor(private fb: FormBuilder, private productoService: ProductoService, private categoriaService: CategoriaService) {}
+  constructor(private fb: FormBuilder,
+                private productoService: ProductoService,
+                  private categoriaService: CategoriaService,
+                    private dialogService: DialogService) {}
 
   ngOnInit(): void {
     this.productoForm = this.fb.group({
@@ -62,14 +66,14 @@ export class ProductoFormComponent implements OnInit {
       if (this.productoEditando) {
         // ✅ Si se está editando, actualiza el producto
         this.productoService.actualizarProducto(producto.id!, producto).subscribe(() => {
-          alert('Producto actualizado con éxito');
+          this.productoService.showSuccessMessage('Producto Actualizado Con Éxito', 5);
           this.cancelarEdicion(); // Reinicia el formulario
           this.loadProductos();
         });
       } else {
         // ✅ Si no, crea un nuevo producto
         this.productoService.crearProducto(producto).subscribe(() => {
-          alert('Producto guardado con éxito');
+          this.productoService.showSuccessMessage('Producto Guardado Con Éxito',5);
           this.cancelarEdicion(); // Reinicia el formulario
           this.loadProductos();
         });
@@ -94,12 +98,14 @@ export class ProductoFormComponent implements OnInit {
 
   /** ✅ Método para eliminar un producto */
   eliminarProducto(id: number): void {
-    if (confirm('¿Seguro que quieres eliminar este producto?')) {
-      this.productoService.eliminarProducto(id).subscribe(() => {
-        alert('Producto eliminado con éxito');
-        this.loadProductos();
-      });
-    }
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar Este Producto?').subscribe(result => {
+      if (result) {
+        this.productoService.eliminarProducto(id).subscribe(() => {
+          this.productoService.showSuccessMessage('Producto Eliminado Con Éxito', 5);
+          this.loadProductos();
+        });
+      }
+    });
   }
 
   /** ✅ Método para cargar productos en la tabla */
