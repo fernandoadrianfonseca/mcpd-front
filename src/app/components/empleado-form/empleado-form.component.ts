@@ -1,5 +1,6 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Empleado } from '../../models/empleado.model';
 import { EmpleadoService } from '../../services/rest/empleado/empleado.service';
 import { CommonModule } from '@angular/common';
@@ -10,6 +11,7 @@ import { MatSort } from '@angular/material/sort';
 import { ContribuyenteService } from '../../services/rest/contribuyente/contribuyente.service';
 import { Contribuyente } from '../../models/contribuyente.model';
 import { DialogService } from '../../services/dialog/dialog.service';
+import { StockFormComponent } from '../stock-form/stock-form.component';
 
 @Component({
   selector: 'app-empleado-form',
@@ -35,12 +37,19 @@ export class EmpleadoFormComponent implements OnInit {
     "Tesoreria", "Compras"
   ];
 
+  modoCustodia = false;
+
   constructor(private fb: FormBuilder,
                private empleadoService: EmpleadoService,
                 private contribuyenteService: ContribuyenteService,
-                  private dialogService: DialogService) {}
+                  private dialogService: DialogService,
+                      @Inject('menuData') public menuData: any) {}
 
   ngOnInit(): void {
+    this.modoCustodia = this.menuData?.modoCustodia || false;
+    this.displayedColumns = this.modoCustodia
+                                              ? ['legajo', 'cuil', 'nombre', 'categoria', 'agrupamiento', 'dependencia','sistema', 'accionesCustodia']
+                                              : ['legajo', 'cuil', 'nombre', 'categoria', 'agrupamiento', 'dependencia','sistema', 'acciones'];
     this.empleadoForm = this.fb.group({
       legajo: ['', [Validators.required, Validators.min(1), this.validarLegajoUnico.bind(this)]],
       cuil: ['', [Validators.required,
@@ -182,6 +191,46 @@ export class EmpleadoFormComponent implements OnInit {
         this.paginator._changePageSize(this.paginator.pageSize);
       }
     });
+  }
+
+  listarStock(empleado: Empleado) {
+    const data = { modoCustodia: true, empleado: empleado };
+    window.dispatchEvent(new CustomEvent('navegarComponente', {
+      detail: {
+        componente: StockFormComponent,
+        data: data
+      }
+    }));
+  }
+  
+  asignarStock(empleado: Empleado) {
+    const data = { modoAsignar: true, empleado };
+    window.dispatchEvent(new CustomEvent('navegarComponente', {
+      detail: {
+        componente: StockFormComponent,
+        data: data
+      }
+    }));
+  }
+  
+  quitarStock(empleado: Empleado) {
+    const data = { modoQuitar: true, empleado };
+    window.dispatchEvent(new CustomEvent('navegarComponente', {
+      detail: {
+        componente: StockFormComponent,
+        data: data
+      }
+    }));
+  }
+  
+  transferirStock(empleado: Empleado) {
+    const data = { modoTransferir: true, empleado };
+    window.dispatchEvent(new CustomEvent('navegarComponente', {
+      detail: {
+        componente: StockFormComponent,
+        data: data
+      }
+    }));
   }
 }
 

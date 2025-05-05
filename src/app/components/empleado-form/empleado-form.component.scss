@@ -160,3 +160,24 @@ th.mat-header-cell {
 th.mat-header-cell .mat-sort-header-container {
   justify-content: center !important;
 }
+
+.custodia-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 4px;
+  border-radius: 6px;
+
+  button {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background-color: #e0e0e0;
+    }
+  }
+}

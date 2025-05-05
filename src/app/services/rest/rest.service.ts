@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ConfigService } from '../config/config.service';
@@ -22,8 +22,12 @@ export class RestService {
     this.apiUrl = configService.apiUrl;
   }
 
-  get<T>(endpoint: string, skipErrorHandler = false): Observable<T> {
-    return this.http.get<T>(`${this.apiUrl}/${endpoint}`).pipe(catchError(err => this.handleError(err, `ERROR: GET ${endpoint}`, skipErrorHandler)));
+  get<T>(endpoint: string, options?: {skipErrorHandler?: boolean; params?: HttpParams; }): Observable<T> {
+    const { skipErrorHandler = false, params } = options || {};
+  
+    return this.http.get<T>(`${this.apiUrl}/${endpoint}`, { params }).pipe(
+      catchError(err => this.handleError(err, `ERROR: GET ${endpoint}`, skipErrorHandler))
+    );
   }
 
   post<T>(endpoint: string, data: any, options: object = {}, skipErrorHandler = false): Observable<T> {

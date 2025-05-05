@@ -8,23 +8,15 @@ export class ProductosStock {
   producto!: Producto;
   productoNombre!: string;
   cantidad!: number;
+  cantidadCustodia!: number;
   precio?: number;
   marca?: string;
   modelo?: string;
   detalle?: string;
-  unidades?: number;
-  numeroDeSerie?: string;
   fechaDeCarga?: string;
   updated?: string;
   tipo!: string;
-  ordenDeCompra?: string;
-  remito?: string;
-  custodia?: number;
-  acta?: number;
-  transfiere?: number;
-  motivoBaja?: string;
-  fechaDeDevolucion?: string;
-  observaciones?: string;
+  consumible!: boolean;
 
   constructor(init?: Partial<ProductosStock>) {
     Object.assign(this, init);

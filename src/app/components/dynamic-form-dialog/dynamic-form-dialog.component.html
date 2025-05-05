@@ -1,0 +1,47 @@
+<!-- dynamic-form-dialog.component.html -->
+<div class="dialog-container">
+  <div class="dialog-title">{{ data.title }}</div>
+  
+  <form [formGroup]="form">
+    <div class="dialog-form-grid">
+  
+      <!-- Normal fields -->
+      <ng-container *ngFor="let field of data.fields">
+        <ng-container *ngIf="!field.multiple">
+          <mat-form-field appearance="outline">
+            <mat-label>{{ field.label }}</mat-label>
+            <input matInput [formControlName]="field.name" [type]="field.type || 'text'">
+            <mat-error *ngIf="form.get(field.name)?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+        </ng-container>
+  
+        <!-- Multiple fields -->
+        <ng-container *ngIf="field.multiple">
+          <label class="field-label">{{ field.label }}</label>
+          <div formArrayName="{{ field.name }}">
+            <div *ngFor="let ctrl of getFieldArray(field.name).controls; let i = index">
+              <div class="multiple-field-container">
+                <mat-form-field appearance="outline" class="multiple-field">
+                  <input matInput [formControlName]="i" placeholder="{{ field.label }} #{{ i + 1 }}">
+                </mat-form-field>
+                <button mat-icon-button color="warn" (click)="removeField(field.name, i)" *ngIf="form.get(field.name)?.value.length > 1">
+                  <mat-icon>remove</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+          <button mat-icon-button color="primary" (click)="addField(field.name)" aria-label="Agregar">
+            <mat-icon>add</mat-icon>
+          </button>
+        </ng-container>
+      </ng-container>
+ 
+    </div>
+  </form>
+ 
+  <div class="dialog-actions">
+    <button mat-raised-button color="primary" (click)="confirm()" [disabled]="form.invalid">Cargar</button>
+    <button mat-raised-button color="warn" (click)="cancel()">Cancelar</button>
+  </div>
+</div>
+  

@@ -1,0 +1,111 @@
+.dialog-container {
+    width: 600px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.5s ease-in-out;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .dialog-icon {
+    font-size: 48px;
+    color: #1976d2;
+    align-self: center;
+    min-height: fit-content;
+    min-width: fit-content;
+  }
+  
+  .dialog-title {
+    font-size: 26px;
+    font-weight: bold;
+    color: #1976d2;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  .dialog-message {
+    font-size: 16px;
+    color: #333;
+    text-align: center;
+    font-weight: 500;
+  }
+  
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding-top: 10px;
+  }
+  
+  button[mat-raised-button] {
+    padding: 10px 20px;
+    font-weight: bold;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+  }
+  
+  button[mat-raised-button]:hover:not(:disabled) {
+    background: #1565c0;
+    box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
+  }
+  
+  .filter-container {
+    display: flex;
+    justify-content: flex-start;
+  }
+  
+  mat-form-field {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .centered-header {
+    text-align: center !important;
+    font-weight: bold;
+    color: #1976d2;
+    background-color: #f5f5f5;
+    font-size: 15px;
+  }
+
+  .centered-cell {
+    text-align: center !important;
+    vertical-align: middle !important;
+  }
+
+  .error-icon {
+    font-size: 48px;
+    color: #d32f2f !important;
+    align-self: center;
+    min-height: fit-content;
+    min-width: fit-content;
+  }
+  
+  .error-title {
+    font-size: 26px;
+    font-weight: bold;
+    color: #d32f2f;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  

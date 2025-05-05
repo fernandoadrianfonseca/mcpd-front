@@ -1,0 +1,80 @@
+.dialog-container {
+  width: 760px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeIn 0.5s ease-in-out;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+  
+.dialog-title {
+  font-size: 26px;
+  font-weight: bold;
+  color: #1976d2;
+  text-align: center;
+  margin-bottom: 10px;
+}
+  
+.dialog-form-grid {
+  //display: grid;
+  //grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+  
+mat-form-field {
+  width: 100%;
+}
+  
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  padding-top: 10px;
+}
+  
+button[mat-raised-button] {
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: background-color 0.3s ease;
+}
+  
+button[mat-raised-button]:hover:not(:disabled) {
+  background: #1565c0;
+  box-shadow: 0 4px 10px rgba(25, 118, 210, 0.3);
+}
+  
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.field-label {
+  font-weight: 600;
+  margin-top: 10px;
+  color: #1976d2;
+}
+  
+.multiple-field-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+  
+.multiple-field {
+  flex: 1;
+}

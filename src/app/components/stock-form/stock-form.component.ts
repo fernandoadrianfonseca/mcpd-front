@@ -1,6 +1,7 @@
-import { Component, OnInit, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { Component, OnInit, ViewChild, AfterViewInit, Inject } from '@angular/core';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, AbstractControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
+import { DynamicFormDialogComponent } from '../../components/dynamic-form-dialog/dynamic-form-dialog.component';
 import { MaterialModule } from '../../modules/material/material.module';
 import { ProductosStock } from '../../models/stock.model';
 import { StockService } from '../../services/rest/stock/stock.service';
@@ -8,12 +9,24 @@ import { CategoriaService } from '../../services/rest/categoria/categoria.servic
 import { ProductoService } from '../../services/rest/producto/producto.service';
 import { Categoria } from '../../models/categoria.model';
 import { Producto } from '../../models/producto.model';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { MatSort } from '@angular/material/sort';
 import { DialogService } from '../../services/dialog/dialog.service';
+import { EmpleadoService } from '../../services/rest/empleado/empleado.service';
+import { Empleado } from '../../models/empleado.model';
+import { MatDialog } from '@angular/material/dialog';
+import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.component';
+import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-table-dialog.component';
+
+interface StockParaAsignar {
+  stock: ProductosStock;
+  cantidad: number;
+  observaciones: string | null;
+}
 
 @Component({
   selector: 'stock-form',
@@ -26,12 +39,22 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   categorias: Categoria[] = [];
   productos: Producto[] = [];
   stockItems: ProductosStock[] = [];
-  displayedColumns: string[] = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'unidades', 'tipo', 'marca', 'modelo', 'numeroDeSerie', 'acciones'];
+  stockParaAsignar: StockParaAsignar[] = [];
+  empleados: Empleado[] = [];
+  displayedColumns: string[] = [];
+  displayedColumnsAsignacion: string[] = [];
   dataSource = new MatTableDataSource<ProductosStock>();
+  stockParaAsignarDS = new MatTableDataSource<StockParaAsignar>();
 
   stockEditando: ProductosStock | null = null;
   filteredCategorias!: Observable<Categoria[]>;
   filteredProductos!: Observable<Producto[]>;
+  legajoLogueado : number | null = null;
+  legajoCustodia : number | null = null;
+  modoCustodia = false;
+  modoAsignar = false;
+  modoQuitar = false;
+  modoTransferir = false;
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -39,23 +62,38 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   constructor(
     private fb: FormBuilder,
     private stockService: StockService,
+    private empleadoService: EmpleadoService,
     private categoriaService: CategoriaService,
     private productoService: ProductoService,
-    private dialogService: DialogService
+    private dialogService: DialogService,
+    private dialog: MatDialog,
+    @Inject('menuData') public menuData: any
   ) {}
 
   ngOnInit(): void {
+
+    this.modoCustodia = this.menuData?.modoCustodia || false;
+    this.legajoLogueado = this.menuData?.empleadoLogueado?.legajo || null;
+    this.legajoCustodia = this.menuData?.empleado?.legajo || null;
+    this.modoAsignar = this.menuData?.modoAsignar || false;
+    this.modoQuitar = this.menuData?.modoQuitar || false;
+    this.modoTransferir = this.menuData?.modoTransferir || false;
+
+    this.displayedColumnsAsignacion = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'consumible', 'observaciones', 'accionesAsignar'];
+    this.displayedColumns = this.modoCustodia
+              ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'detalles', 'numeroDeSerie']
+              : this.modoAsignar || this.modoQuitar || this.modoTransferir
+                ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'accionesAgregar']
+                : ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'tipo', 'marca', 'modelo', 'consumible', 'numeroDeSerie', 'detalles', 'custodia', 'acciones'];
+
     this.stockForm = this.fb.group({
       categoria: ['', Validators.required],
       producto: [{ value: '', disabled: true }, Validators.required],
-      cantidad: ['', [Validators.required, Validators.min(1)]],
-      unidades: ['', [Validators.required, Validators.min(1)]],
       marca: [''],
       modelo: [''],
       detalle: [''],
-      numeroDeSerie: [''],
       tipo: ['', Validators.required],
-      observaciones: ['']
+      consumible: ['false', Validators.required],
     });
 
     this.categoriaService.getCategorias().subscribe(data => {
@@ -76,10 +114,12 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
 
     this.loadStock();
+    this.loadEmpleados();
   }
 
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
+    this.onTipoCustodiaChange();
   }
 
   filterList(value: string | null, list: any[]): any[] {
@@ -111,64 +151,171 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }
   }
 
-  /** ✅ Crear o actualizar stock */
-  onSubmit(): void {
-    if (this.stockForm.valid) {
+  onTipoCustodiaChange(): void {
 
-      const categoria = this.stockForm.value.categoria as Categoria;
-      const categoriaId = categoria.id;
-      const categoriaNombre = categoria.nombre;
-
-      const producto = this.stockForm.value.producto as Producto;
-      const productoId = producto.id;
-      const productoNombre = producto.nombre;
-
-      const stock: ProductosStock = {
-        id: this.stockEditando ? this.stockEditando.id : undefined,
-        categoria: { id: categoriaId, nombre: categoriaNombre },
-        categoriaNombre: categoriaNombre,
-        producto: { id: productoId, nombre: productoNombre, categoria: { id: categoriaId, nombre: categoriaNombre }, categoriaNombre: categoriaNombre },
-        productoNombre: productoNombre,
-        cantidad: this.stockForm.value.cantidad, 
-        unidades: this.stockForm.value.unidades,
-        tipo: this.stockForm.value.tipo,
-        marca: this.stockForm.value.marca,
-        modelo: this.stockForm.value.modelo,
-        numeroDeSerie: this.stockForm.value.numeroDeSerie,
-        detalle: this.stockForm.value.detalle,
-        ordenDeCompra: this.stockForm.value.ordenDeCompra,
-        remito: this.stockForm.value.remito,
-        custodia: this.stockForm.value.custodia,
-        acta: this.stockForm.value.acta,
-        transfiere: this.stockForm.value.transfiere,
-        motivoBaja: this.stockForm.value.motivoBaja,
-        fechaDeDevolucion: this.stockForm.value.fechaDeDevolucion,
-        observaciones: this.stockForm.value.observaciones
-    };
-
-      if (this.stockEditando) {
-        this.stockService.actualizarStock(stock.id!, stock).subscribe(() => {
-          this.stockService.showSuccessMessage('Stock actualizado con éxito', 5);
-          this.cancelarEdicion();
-          this.loadStock();
-        });
+    this.stockForm.get('tipoCustodia')?.valueChanges.subscribe(value => {
+      const legajoCtrl = this.stockForm.get('legajoCustodia');
+    
+      if (value === '1') {
+        legajoCtrl?.enable();
       } else {
-        this.stockService.crearStock(stock).subscribe(() => {
-          this.stockService.showSuccessMessage('Stock guardado con éxito', 5);
-          this.cancelarEdicion();
-          this.loadStock();
-        });
+        legajoCtrl?.disable();
+        legajoCtrl?.reset();
       }
-    }
+    });
   }
 
-  /** ✅ Cargar stock en la tabla */
+  onSubmit(): void {
+    if (this.stockForm.invalid) return;
+  
+    const stock = this.buildStockFromForm();
+  
+    if (this.stockEditando) {
+      this.actualizarStock(stock);
+      return;
+    }
+  
+    if (this.existeStockDuplicado(stock)) {
+      this.mostrarDialogoOk(
+        'Ya Existe Un Stock Con La Misma Categoría, Producto Y Detalle. No Se Puede Agregar Duplicado.',
+        {
+          icono: 'error_outline',
+          colorIcono: '#d32f2f',
+          titulo: '¡Advertencia!'
+        }
+      );
+      return;
+    }
+  
+    const similares = this.buscarStocksSimilares(stock);
+    if (similares.length > 0) {
+      this.confirmarAgregarStockSimilar(similares, stock);
+      return;
+    }
+  
+    this.crearNuevoStock(stock);
+  }
+
+  private buildStockFromForm(): ProductosStock {
+    const categoria = this.stockForm.value.categoria as Categoria;
+    const producto = this.stockForm.value.producto as Producto;
+  
+    return {
+      id: this.stockEditando?.id,
+      categoria: { id: categoria.id, nombre: categoria.nombre },
+      categoriaNombre: categoria.nombre,
+      producto: {
+        id: producto.id,
+        nombre: producto.nombre,
+        categoria: { id: categoria.id, nombre: categoria.nombre },
+        categoriaNombre: categoria.nombre
+      },
+      productoNombre: producto.nombre,
+      cantidad: this.stockEditando?.cantidad || 0,
+      cantidadCustodia: this.stockEditando?.cantidadCustodia || 0,
+      tipo: this.stockForm.value.tipo,
+      marca: this.stockForm.value.marca,
+      modelo: this.stockForm.value.modelo,
+      detalle: this.stockForm.value.detalle,
+      consumible: this.stockForm.value.consumible === 'true'
+    };
+  }
+
+  private existeStockDuplicado(stock: ProductosStock): boolean {
+    const detalleForm = stock.detalle?.trim().toLowerCase() ?? '';
+    return this.stockItems.some(s =>
+      s.producto.id === stock.producto.id &&
+      s.categoria.id === stock.categoria.id &&
+      (s.detalle?.trim().toLowerCase() ?? '') === detalleForm
+    );
+  }
+  
+  private buscarStocksSimilares(stock: ProductosStock): ProductosStock[] {
+    const detalleForm = stock.detalle?.trim().toLowerCase() ?? '';
+    return this.stockItems.filter(s =>
+      s.producto.id === stock.producto.id &&
+      s.categoria.id === stock.categoria.id &&
+      (s.detalle?.trim().toLowerCase() ?? '') !== detalleForm
+    );
+  }
+
+  private mostrarDialogoOk(
+    mensaje: string,
+    opciones?: {
+      icono?: string;
+      colorIcono?: string;
+      titulo?: string;
+      textoBotonOk?: string;
+    }
+  ): void {
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '500px',
+      data: {
+        message: mensaje,
+        okOnly: true,
+        icon: opciones?.icono || 'help_outline',
+        iconColor: opciones?.colorIcono || '#2196f3',
+        title: opciones?.titulo,
+        okLabel: opciones?.textoBotonOk || 'OK'
+      }
+    });
+  }
+
+  private confirmarAgregarStockSimilar(similares: ProductosStock[], stock: ProductosStock): void {
+    const dialogRef = this.dialog.open(ConfirmTableDialogComponent, {
+      width: '660px',
+      data: {
+        message: 'Ya Existen Registros Con Esta Categoría Y Producto, Pero Con Distintos Detalles. Asegúrese De Que No Está Duplicando. ¿Desea Continuar?',
+        columns: ['detalle'],
+        columnNames: { detalle: 'Detalles Existente' },
+        rows: similares
+      }
+    });
+    
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.crearNuevoStock(stock);
+      }
+    });
+  }
+
+  private crearNuevoStock(stock: ProductosStock): void {
+    this.stockService.crearStock(stock).subscribe(() => {
+      this.stockService.showSuccessMessage('Stock Guardado Con Éxito', 5);
+      this.cancelarEdicion();
+      this.loadStock();
+    });
+  }
+  
+  private actualizarStock(stock: ProductosStock): void {
+    this.stockService.actualizarStock(stock.id!, stock).subscribe(() => {
+      this.stockService.showSuccessMessage('Stock Actualizado Con Éxito', 5);
+      this.cancelarEdicion();
+      this.loadStock();
+    });
+  }
+
   loadStock(): void {
-    this.stockService.getStock().subscribe(data => {
+    const stockObservable =
+      (this.modoCustodia || this.modoQuitar) && this.legajoCustodia !== null
+        ? this.stockService.getStockPorCustodia(this.legajoCustodia)
+        : this.modoAsignar
+          ? this.stockService.getStockDisponibleParaAsignar()
+          : this.modoTransferir && this.legajoCustodia !== null
+            ? this.stockService.getStockCustodiaExcluyendo(this.legajoCustodia)
+            : this.stockService.getStock();
+  
+    stockObservable.subscribe(data => {
       this.stockItems = data;
       this.dataSource.data = this.stockItems;
       this.updatePaginator();
       this.dataSource.sort = this.sort; // ✅ Aseguramos que se asigne después de obtener datos
+    });
+  }
+
+  loadEmpleados(): void {
+    this.empleadoService.getEmpleados().subscribe(data => {
+      this.empleados = data;
     });
   }
 
@@ -187,20 +334,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       categoria: categoria ? categoria : null,
       producto: producto ? producto : null,
       cantidad: stock.cantidad,
-      unidades: stock.unidades,
       tipo: stock.tipo,
       marca: stock.marca,
       modelo: stock.modelo,
-      numeroDeSerie: stock.numeroDeSerie,
-      detalle: stock.detalle,
-      ordenDeCompra: stock.ordenDeCompra,
-      remito: stock.remito,
-      custodia: stock.custodia,
-      acta: stock.acta,
-      transfiere: stock.transfiere,
-      motivoBaja: stock.motivoBaja,
-      fechaDeDevolucion: stock.fechaDeDevolucion,
-      observaciones: stock.observaciones
+      detalle: stock.detalle
     });
   
     // ✅ **Actualizar `mat-autocomplete` correctamente**
@@ -232,15 +369,225 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       categoria: '',
       producto: '',
       cantidad: '',
-      unidades: '',
       marca: '',
       modelo: '',
       detalle: '',
-      numeroDeSerie: '',
-      tipo: '',
-      observaciones: ''
+      tipo: ''
     });
     this.stockForm.controls['producto'].disable();
+    this.stockForm.get('legajoCustodia')?.disable();
+  }
+
+  agregar(stock: ProductosStock): void {
+
+    const tituloAccion = this.modoAsignar ? 'Asignar' : 'Quitar';
+
+    const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
+      width: '820px',
+      data: {
+        title: `${tituloAccion} Producto ${stock.productoNombre} ${stock.detalle ?? ''} A Empleado Legajo: ${this.menuData.empleado.legajo}`,
+        fields: [
+          { name: 'cantidad', label: 'Cantidad a Asignar', type: 'number', required: true },
+          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
+        ]
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const cantidadIngresada = +result.cantidad;
+  
+        if (cantidadIngresada <= 0) {
+          this.mostrarDialogoOk('La Cantidad Debe Ser Mayor A Cero.', {
+            icono: 'error_outline',
+            colorIcono: '#d32f2f',
+            titulo: 'Cantidad inválida'
+          });
+          return;
+        }
+  
+        const disponible = stock.consumible
+          ? stock.cantidad
+          : stock.cantidad - stock.cantidadCustodia;
+  
+        if (cantidadIngresada > disponible) {
+          this.mostrarDialogoOk(
+            `La Cantidad Ingresada Supera El Disponible Sin Custodia Igual A ${disponible}.`,
+            {
+              icono: 'error_outline',
+              colorIcono: '#d32f2f',
+              titulo: 'Cantidad excedida'
+            }
+          );
+          return;
+        }
+  
+        const stockAsignado: StockParaAsignar  = {
+          stock: stock,
+          cantidad: cantidadIngresada,
+          observaciones: result.observaciones?.trim() || null
+        };
+  
+        this.stockParaAsignar.push(stockAsignado);
+        this.stockParaAsignarDS.data = [...this.stockParaAsignar]; // ✅ Forzar actualización
+      }
+    });
+  }
+
+  confirmarAsignacion(): void {
+    const legajo = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        message: `¿Está Seguro Que Desea Asignar El Stock Seleccionado Al Empleado ${legajo} ${nombre}?`
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.asignarStockYGenerarReporte();
+      }
+    });
+  }
+
+  asignarStockYGenerarReporte(): void {
+    
+    const items = this.stockParaAsignar.map(stock => ({
+      stockId: stock.stock.id!,
+      cantidad: stock.cantidad,
+      observaciones: stock.observaciones
+    }));
+    const legajo = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
+    if (items.length && legajo) {
+      this.stockService.asignarCustodia(items, legajo).subscribe(() => {
+        this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
+  
+        // Generar reporte
+        this.generarReporteAsignacion();
+  
+        // Limpiar selección
+        this.stockParaAsignar = [];
+        this.stockParaAsignarDS.data = [];
+        this.loadStock();
+      });
+    }
+  }
+
+  generarReporteAsignacion(): void {
+    const legajo = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
+    const datos = this.stockParaAsignar.map(item => ({
+      cantidad: item.cantidad,
+      descripcion: item.stock.productoNombre,
+      oc: '0', //CHECK
+      remito: '0'
+    }));
+  
+    const requestDto = {
+      nombreReporte: 'acta-alta-patrimonial',
+      parametros: {
+        nombreEmpleado: nombre,
+        legajoEmpleado: String(legajo)
+      },
+      datos: datos
+    };
+  
+    this.stockService.generarReporteConLista(requestDto).subscribe(blob => {
+      const url = window.URL.createObjectURL(blob);
+      window.open(url);
+
+      //download
+      /*const a = document.createElement('a');
+      a.href = url;
+      a.download = 'acta-alta-patrimonial.pdf';
+      a.click();
+      window.URL.revokeObjectURL(url);*/
+    });
+  }
+
+  confirmarQuitarCustodia(): void {
+    const legajo = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        message: `¿Está Seguro Que Desea Quitar De Custodia El Stock Seleccionado Al Empleado ${legajo} ${nombre}?`
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        //this.quitarCustodiaSeleccionada();
+      }
+    });
+  }
+
+  /*quitarCustodiaSeleccionada(): void {
+    const items = this.stockParaAsignar.map(stock => ({
+      stockId: stock.stock.id!,
+      cantidad: stock.cantidad
+    }));
+  
+    if (items.length) {
+      this.stockService.quitarCustodia(items).subscribe(() => {
+        this.stockService.showSuccessMessage('Stock Quitado De Custodia Con Éxito', 5);
+        this.stockParaAsignar = [];
+        this.stockParaAsignarDS.data = [];
+        this.loadStock();
+      });
+    }
+  }*/
+
+  confirmarTransferencia(): void {
+    const legajoDestino = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        message: `¿Está Seguro Que Desea Transferir El Stock Seleccionado Al Empleado ${legajoDestino} ${nombre}?`
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.transferirStockSeleccionado();
+      }
+    });
+  }
+
+  transferirStockSeleccionado(): void {
+
+    const items = this.stockParaAsignar.map(stock => ({
+      stockId: stock.stock.id!,
+      cantidad: stock.cantidad
+    }));
+    const legajoDestino = this.menuData?.empleado?.legajo;
+  
+    if (items.length && legajoDestino) {
+      this.stockService.asignarCustodia(items, legajoDestino).subscribe(() => {
+        this.stockService.showSuccessMessage('Stock Transferido Con Éxito', 5);
+        this.stockParaAsignar = [];
+        this.stockParaAsignarDS.data = [];
+        this.loadStock();
+      });
+    }
+  }
+
+  eliminar(stock: StockParaAsignar): void {
+    this.stockParaAsignar = this.stockParaAsignar.filter(s => s.stock.id !== stock.stock.id);
+    this.stockParaAsignarDS.data = [...this.stockParaAsignar];
+  }
+  
+  cancelar(): void {
+    this.stockParaAsignar = [];
+    this.stockParaAsignarDS.data = [];
   }
 
   /** ✅ Eliminar un stock */
@@ -294,5 +641,217 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     this.dataSource.filterPredicate = (data, filter) =>
       (data.detalle?.toLowerCase() || '').includes(filter);
     this.dataSource.filter = filterValue;
+  }
+
+  abrirModalAgregarStock(stock: ProductosStock): void {
+    const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
+      width: '820px',
+      data: {
+        title: `Agregar Stock a: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+        fields: [
+          { name: 'cantidad', label: 'Cantidad', type: 'number', required: true },
+          { name: 'remito', label: 'Remito', type: 'text', required: false },
+          { name: 'numeroDeSerie', label: 'Número de Serie', type: 'text', required: false, multiple: true },
+          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
+        ]
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const cantidadAdicional = +result.cantidad;
+        const empleado = this.menuData?.empleado;
+        const legajo = empleado?.legajo;
+        const total = stock.cantidad + cantidadAdicional;
+  
+        // 1. Actualizar cantidad total
+        const stockActualizado: ProductosStock = {
+          ...stock,
+          cantidad: total
+        };
+  
+        this.stockService.actualizarStock(stock.id!, stockActualizado).subscribe(() => {
+  
+          // 2. Registrar flujo de stock
+          const flujo = {
+            productoStock: { id: stock.id },
+            cantidad: cantidadAdicional,
+            total: total,
+            totalLegajoCustodia: 0,
+            tipo: 'alta',
+            empleadoCarga: legajo,
+            remito: result.remito?.trim() || null,
+            observaciones: result.observaciones?.trim() || null
+          };
+  
+          this.stockService.crearFlujoDeStock(flujo).subscribe(flujoCreado => {
+            
+            const numeros = result.numeroDeSerie instanceof Array
+              ? result.numeroDeSerie.filter((n: string) => n && n.trim() !== '')
+              : [];
+  
+            // 3. Si hay números de serie, los registramos
+            if (numeros.length) {
+              const registros = numeros.map((numero: string) => ({
+                productoFlujo: { id: flujoCreado.id },
+                numeroDeSerie: numero.trim(),
+                empleadoCustodia: null // o legajo si aplica
+              }));
+  
+              this.stockService.crearNumerosDeSerie(registros).subscribe(() => {
+                this.stockService.showSuccessMessage('Stock y Números de Serie Registrados', 5);
+                this.loadStock();
+              });
+  
+            } else {
+              this.stockService.showSuccessMessage('Stock Registrado Sin N° De Serie', 5);
+              this.loadStock();
+            }
+          });
+        });
+      }
+    });
+  }
+
+  abrirModalBajaStock(stock: ProductosStock): void {
+    const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
+      width: '820px',
+      data: {
+        title: `Dar De Baja Stock: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+        fields: [
+          { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
+          { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
+          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
+        ]
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        const cantidadBaja = +result.cantidad;
+  
+        if (cantidadBaja <= 0) {
+          this.mostrarDialogoOk('La Cantidad Debe Ser Mayor A Cero.', {
+            icono: 'error_outline',
+            colorIcono: '#d32f2f',
+            titulo: '¡Cantidad Inválida!'
+          });
+          return;
+        }
+  
+        const nuevoTotal = stock.cantidad - cantidadBaja;
+  
+        if (nuevoTotal < 0) {
+          this.mostrarDialogoOk('La Cantidad A Dar De Baja Supera El Stock Actual.', {
+            icono: 'error_outline',
+            colorIcono: '#d32f2f',
+            titulo: '¡Stock Insuficiente!'
+          });
+          return;
+        }
+  
+        const empleado = this.menuData?.empleado;
+        const legajo = empleado?.legajo;
+  
+        const stockActualizado: ProductosStock = {
+          ...stock,
+          cantidad: nuevoTotal
+        };
+  
+        this.stockService.actualizarStock(stock.id!, stockActualizado).subscribe(() => {
+          const flujo = {
+            productoStock: { id: stock.id },
+            cantidad: cantidadBaja,
+            total: nuevoTotal,
+            totalLegajoCustodia: 0,
+            tipo: 'baja',
+            empleadoCarga: legajo,
+            motivoBaja: result.motivoBaja?.trim(),
+            observaciones: result.observaciones?.trim() || null
+          };
+  
+          this.stockService.crearFlujoDeStock(flujo).subscribe(() => {
+            this.stockService.showSuccessMessage('Baja De Stock Registrada Con Éxito', 5);
+            this.loadStock();
+          });
+        });
+      }
+    });
+  }
+
+  verDetalles(stock: ProductosStock): void {
+
+    const legajoCustodia = this.legajoCustodia ?? undefined;
+    this.stockService.getAltasYBajasPorStock(stock.id!, legajoCustodia).subscribe(flujos => {
+      // Formatear datos antes de mostrar
+      const rows = flujos.map(flujo => ({
+        ...flujo,
+        tipo: flujo.tipo === 'custodia_alta'
+                                ? 'Custodia Alta'
+                                : flujo.tipo === 'custodia_baja'
+                                  ? 'Custodia Baja'
+                                  : flujo.tipo.charAt(0).toUpperCase() + flujo.tipo.slice(1).toLowerCase(),
+        cantidad: flujo.tipo === 'baja' ? `-${flujo.cantidad}` : flujo.cantidad,
+        remito: flujo.remito ? flujo.remito : 'Sin Remito'
+      }));
+
+      const base = `Flujo de Stock ${legajoCustodia ? 'en Custodia' : ''} de ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`;
+      const title = legajoCustodia ? `${base} en Empleado Legajo: ${legajoCustodia}` : base;
+  
+      this.dialog.open(ListadoDialogComponent, {
+        width: '1300px',
+        data: {
+          title: title,
+          columns: ['tipo', 'remito','total', 'cantidad', 'fecha', 'empleadoCustodia', 'totalLegajoCustodia', 'empleadoCarga', 'observaciones'],
+          columnNames: {
+            tipo: 'Tipo',
+            remito: 'Remito',
+            total: 'Total',
+            cantidad: 'Cantidad',
+            fecha: 'Fecha',
+            empleadoCustodia: 'Empleado Custodia',
+            totalLegajoCustodia: 'Total En Custodia Legajo',
+            empleadoCarga: 'Legajo Carga',
+            observaciones: 'Observaciones'
+          },
+          rows: rows,
+          filterableColumns: ['all']
+        }
+      });
+    });
+  }
+  
+  verNumerosDeSerie(stock: ProductosStock, options?: { activo?: boolean, empleadoCustodia?: number }): void {
+    this.stockService.getNumerosDeSeriePorStock(stock.id!, options).subscribe(numeros => {
+      this.dialog.open(ListadoDialogComponent, {
+        width: '1300px',
+        data: {
+          title: `Números de Serie del Stock ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+          columns: ['numeroDeSerie', 'empleadoCustodia.legajo'],
+          columnNames: {
+            numeroDeSerie: 'Número de Serie',
+            'empleadoCustodia.legajo': 'Custodia Legajo'
+          },
+          rows: numeros
+        }
+      });
+    });
+  }
+
+  verCustodias(stock: ProductosStock): void {
+    this.stockService.getCustodiasActivasPorStock(stock.id!).subscribe(custodias => {
+      this.dialog.open(ListadoDialogComponent, {
+        width: '1300px',
+        data: {
+          title: `Custodias Activas de ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+          columns: ['empleadoCustodia', 'totalLegajoCustodia'],
+          columnNames: {
+            empleadoCustodia: 'Legajo Custodia',
+            totalLegajoCustodia: 'Total Custodia'
+          },
+          rows: custodias
+        }
+      });
+    });
   }
 }

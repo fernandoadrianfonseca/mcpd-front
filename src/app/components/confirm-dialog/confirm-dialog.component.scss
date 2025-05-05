@@ -1,29 +1,38 @@
 .dialog-container {
-    text-align: center;
-    padding: 20px;
-    max-width: 300px;
-  
-    .dialog-icon {
-      font-size: 50px;
-      color: #f44336; // Color rojo para advertencia
-      min-height: fit-content;
-      min-width: fit-content;
-    }
-  
-    .dialog-message {
-      font-size: 16px;
-      margin: 15px 0;
-      color: #333;
-    }
-  
-    .dialog-actions {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-  
-      button {
-        font-weight: bold;
-        min-width: 80px;
-      }
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  max-width: 600px;
+  width: 100%;
+  box-sizing: border-box;
+
+  .dialog-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    min-height: fit-content;
+    min-width: fit-content;
+    color: var(--icon-color, #2196f3) !important;
+  }
+
+  .dialog-message {
+    font-size: 16px;
+    margin: 0 0 24px 0;
+    color: #333;
+    word-break: break-word;
+    font-weight: bold;
+    //line-height: 1.4;
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+
+    button {
+      min-width: 80px;
+      font-weight: 500;
     }
   }
+}
