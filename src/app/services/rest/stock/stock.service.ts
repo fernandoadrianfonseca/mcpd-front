@@ -30,12 +30,29 @@ export class StockService {
     return this.restService.get<any[]>(`stock/custodia/${legajo}`);
   }
 
+  getStockExcluyendoCustodia(legajo: number): Observable<ProductosStock[]> {
+    return this.restService.get<ProductosStock[]>(`stock/excluyendo-custodia/${legajo}`);
+  }
+
   getStockDisponibleParaAsignar(): Observable<ProductosStock[]> {
     return this.restService.get<ProductosStock[]>('stock/disponible-asignar');
   }
 
-  asignarCustodia(items: { stockId: number; cantidad: number; }[], legajo: number) {
+  asignarCustodia(items: { stockId: number; cantidad: number; observaciones?: string }[], legajo: number) {
     return this.restService.post('stock/asignar-custodia?legajoEmpleado=' + legajo, items);
+  }
+
+  quitarCustodia(items: { stockId: number; cantidad: number; observaciones?: string }[], legajo: number) {
+    return this.restService.post('stock/quitar-custodia?legajoEmpleado=' + legajo, items);
+  }
+
+  transferirCustodia(
+    items: { stockId: number; cantidad: number; observaciones?: string }[],
+    legajoOrigen: number,
+    legajoDestino: number,
+    legajoCarga: number) {
+    const url = `stock/transferir-custodia?legajoOrigen=${legajoOrigen}&legajoDestino=${legajoDestino}&legajoCarga=${legajoCarga}`;
+    return this.restService.post(url, items);
   }
   
   showSuccessMessage(message: string, duration: number){
@@ -45,31 +62,7 @@ export class StockService {
   generarReporteConLista(requestDto: any): Observable<Blob> {
     return this.restService.post<Blob>('reportes/pdf', requestDto, { responseType: 'blob' });
   }
-
-  getStockCustodiaExcluyendo(legajo: number): Observable<ProductosStock[]> {
-    return this.restService.get<ProductosStock[]>(`stock/custodia/excluyendo?legajo=${legajo}`);
-  }
-
-  quitarCustodia(ids: number[]): Observable<void> {
-    return this.restService.post<void>('stock/quitar-custodia', ids);
-  }
   
-  getStockAsignado(): Observable<ProductosStock[]> {
-    return this.restService.get<ProductosStock[]>('stock/con-custodia');
-  }
-  
-  getStockSinBaja(): Observable<ProductosStock[]> {
-    return this.restService.get<ProductosStock[]>('stock/sin-baja');
-  }
-  
-  getStockConBaja(): Observable<ProductosStock[]> {
-    return this.restService.get<ProductosStock[]>('stock/con-baja');
-  }
-
-  getRemitosPorStock(id: number): Observable<any[]> {
-    return this.restService.get<any[]>(`stock-flujo/producto-stock/${id}/remitos`);
-  }
-
   getNumerosDeSeriePorStock(id: number, options?: { activo?: boolean, empleadoCustodia?: number }): Observable<any[]> {
     let params = new HttpParams();
   

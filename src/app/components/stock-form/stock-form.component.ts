@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild, AfterViewInit, Inject } from '@angular/core';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, AbstractControl } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, AbstractControl, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DynamicFormDialogComponent } from '../../components/dynamic-form-dialog/dynamic-form-dialog.component';
 import { MaterialModule } from '../../modules/material/material.module';
@@ -12,7 +12,7 @@ import { Producto } from '../../models/producto.model';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { MatSort } from '@angular/material/sort';
 import { DialogService } from '../../services/dialog/dialog.service';
@@ -21,6 +21,7 @@ import { Empleado } from '../../models/empleado.model';
 import { MatDialog } from '@angular/material/dialog';
 import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.component';
 import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-table-dialog.component';
+import { MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 
 interface StockParaAsignar {
   stock: ProductosStock;
@@ -55,6 +56,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   modoAsignar = false;
   modoQuitar = false;
   modoTransferir = false;
+  empleadoControl = new FormControl();
+  empleadoSeleccionado: any = null;
+  empleadosFiltrados: Observable<any[]> = of([]);
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -120,6 +124,22 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.onTipoCustodiaChange();
+  }
+
+  abrirAutocomplete(): void {
+    this.empleadoControl.setValue("");
+    this.empleadoSeleccionado = null;
+  }
+
+  filtrarEmpleados(nombre: string): any[] {
+    const filterValue = nombre.toLowerCase();
+    return this.empleados.filter(emp =>
+      `${emp.legajo} ${emp.nombre}`.toLowerCase().includes(filterValue)
+    );
+  }
+
+  displayEmpleado(empleado: any): string {
+    return empleado ? `${empleado.legajo} - ${empleado.nombre}` : '';
   }
 
   filterList(value: string | null, list: any[]): any[] {
@@ -302,7 +322,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         : this.modoAsignar
           ? this.stockService.getStockDisponibleParaAsignar()
           : this.modoTransferir && this.legajoCustodia !== null
-            ? this.stockService.getStockCustodiaExcluyendo(this.legajoCustodia)
+            ? this.stockService.getStockPorCustodia(this.legajoCustodia)
             : this.stockService.getStock();
   
     stockObservable.subscribe(data => {
@@ -316,7 +336,16 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   loadEmpleados(): void {
     this.empleadoService.getEmpleados().subscribe(data => {
       this.empleados = data;
+      this.empleadosFiltrados = this.empleadoControl.valueChanges.pipe(
+        startWith(''),
+        map(value => typeof value === 'string' ? value : `${value.legajo} ${value.nombre}`),
+        map(name => this.filtrarEmpleados(name))
+      );
     });
+  }
+
+  onEmpleadoSeleccionado(event: MatAutocompleteSelectedEvent): void {
+    this.empleadoSeleccionado = event.option.value;
   }
 
   /** ✅ Cargar datos en el formulario para edición */
@@ -379,15 +408,21 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   agregar(stock: ProductosStock): void {
-
-    const tituloAccion = this.modoAsignar ? 'Asignar' : 'Quitar';
-
+    const tituloAccion = this.modoAsignar
+      ? 'Asignar'
+      : this.modoQuitar
+      ? 'Quitar'
+      : this.modoTransferir
+      ? 'Transferir'
+      : 'Operación';
+  
+    const legajoText = this.modoTransferir ? '' : ` A Empleado Legajo: ${this.menuData.empleado.legajo}`;
     const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
       width: '820px',
       data: {
-        title: `${tituloAccion} Producto ${stock.productoNombre} ${stock.detalle ?? ''} A Empleado Legajo: ${this.menuData.empleado.legajo}`,
+        title: `${tituloAccion} Producto ${stock.productoNombre} ${stock.detalle ?? ''}${legajoText}`,
         fields: [
-          { name: 'cantidad', label: 'Cantidad a Asignar', type: 'number', required: true },
+          { name: 'cantidad', label: `Cantidad a ${tituloAccion}`, type: 'number', required: true },
           { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
         ]
       }
@@ -406,23 +441,43 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           return;
         }
   
-        const disponible = stock.consumible
-          ? stock.cantidad
-          : stock.cantidad - stock.cantidadCustodia;
+        let disponible = 0;
   
-        if (cantidadIngresada > disponible) {
-          this.mostrarDialogoOk(
-            `La Cantidad Ingresada Supera El Disponible Sin Custodia Igual A ${disponible}.`,
-            {
-              icono: 'error_outline',
-              colorIcono: '#d32f2f',
-              titulo: 'Cantidad excedida'
-            }
-          );
-          return;
+        if (this.modoAsignar) {
+          disponible = stock.consumible
+            ? stock.cantidad
+            : stock.cantidad - stock.cantidadCustodia;
+  
+          if (cantidadIngresada > disponible) {
+            this.mostrarDialogoOk(
+              `La Cantidad Ingresada Supera El Disponible Sin Custodia Igual A ${disponible}.`,
+              {
+                icono: 'error_outline',
+                colorIcono: '#d32f2f',
+                titulo: 'Cantidad excedida'
+              }
+            );
+            return;
+          }
         }
   
-        const stockAsignado: StockParaAsignar  = {
+        if (this.modoQuitar || this.modoTransferir) {
+          const enCustodia = stock.cantidadCustodia;
+  
+          if (cantidadIngresada > enCustodia) {
+            this.mostrarDialogoOk(
+              `La Cantidad Ingresada Supera La Cantidad En Custodia (${enCustodia}).`,
+              {
+                icono: 'error_outline',
+                colorIcono: '#d32f2f',
+                titulo: 'Cantidad excedida'
+              }
+            );
+            return;
+          }
+        }
+  
+        const stockAsignado: StockParaAsignar = {
           stock: stock,
           cantidad: cantidadIngresada,
           observaciones: result.observaciones?.trim() || null
@@ -459,7 +514,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     const items = this.stockParaAsignar.map(stock => ({
       stockId: stock.stock.id!,
       cantidad: stock.cantidad,
-      observaciones: stock.observaciones
+      observaciones: stock.observaciones ?? undefined
     }));
   
     if (items.length && legajo) {
@@ -488,11 +543,99 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }
   }
 
-  generarReporteAsignacion(stockAsignado: StockParaAsignar[], nombreReporte: string): void {
+  confirmarQuitarCustodia(): void {
     const legajo = this.menuData?.empleado?.legajo;
-    const legajoEntrega = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
-    const nombreEntrega = this.menuData?.empleadoLogueado?.nombre;
+  
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        message: `¿Está Seguro Que Desea Quitar De Custodia El Stock Seleccionado Al Empleado ${legajo} ${nombre}?`
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.quitarCustodiaYGenerarReporte();
+      }
+    });
+  }
+
+  quitarCustodiaYGenerarReporte(): void {
+    const legajo = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
+    const items = this.stockParaAsignar.map(stock => ({
+      stockId: stock.stock.id!,
+      cantidad: stock.cantidad,
+      observaciones: stock.observaciones ?? undefined
+    }));
+  
+    if (items.length && legajo) {
+      this.stockService.quitarCustodia(items, legajo).subscribe(() => {
+        this.stockService.showSuccessMessage('Stock Quitado Con Éxito', 5);
+  
+        // Generar reporte de baja
+        this.generarReporteAsignacion(this.stockParaAsignar, 'acta-baja-patrimonial');
+  
+        // Limpiar selección y recargar stock
+        this.stockParaAsignar = [];
+        this.stockParaAsignarDS.data = [];
+        this.loadStock();
+      });
+    }
+  }
+
+  confirmarTransferencia(): void {
+
+    const legajoDestino = this.empleadoSeleccionado.legajo;
+    const nombre = this.empleadoSeleccionado.nombre;
+  
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        message: `¿Está Seguro Que Desea Transferir El Stock Seleccionado Al Empleado ${legajoDestino} ${nombre}?`
+      }
+    });
+  
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.transferirCustodiaYGenerarReporte();
+      }
+    });
+  }
+
+  transferirCustodiaYGenerarReporte(): void {
+
+    const legajoDestino = this.empleadoSeleccionado.legajo;
+    const legajoOrigen = this.menuData?.empleado?.legajo;
+    const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
+    const items = this.stockParaAsignar.map(stock => ({
+      stockId: stock.stock.id!,
+      cantidad: stock.cantidad,
+      observaciones: stock.observaciones ?? undefined
+    }));
+  
+    if (items.length && legajoOrigen && legajoDestino) {
+      this.stockService.transferirCustodia(items, legajoOrigen, legajoDestino, legajoCarga).subscribe(() => {
+        this.stockService.showSuccessMessage('Stock Transferido Con Éxito', 5);
+  
+        // Generar reporte de transferencia
+        this.generarReporteAsignacion(this.stockParaAsignar, 'acta-transferencia-patrimonial');
+  
+        // Limpiar selección y recargar stock
+        this.stockParaAsignar = [];
+        this.stockParaAsignarDS.data = [];
+        this.loadStock();
+      });
+    }
+  }
+
+  generarReporteAsignacion(stockAsignado: StockParaAsignar[], nombreReporte: string): void {
+    const legajoSeleccionadoLista = this.menuData?.empleado?.legajo;
+    const nombreSeleccionadoLista = this.menuData?.empleado?.nombre;
+    const legajoLogueado = this.menuData?.empleadoLogueado?.legajo;
+    const nombreLogueado = this.menuData?.empleadoLogueado?.nombre;
   
     const datos = stockAsignado.map(item => ({
       cantidad: item.cantidad,
@@ -502,15 +645,23 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       remito: '0'
     }));
   
-    const parametros: any = {
-      nombreEmpleado: nombre,
-      legajoEmpleado: String(legajo)
-    };
+    let parametros: any = {};
   
     // Si el reporte es de entrega, agregamos los parámetros de entrega
-    if (nombreReporte === 'acta-entrega-patrimonial') {
-      parametros.nombreEmpleadoEntrega = nombreEntrega;
-      parametros.legajoEmpleadoEntrega = String(legajoEntrega);
+    if (nombreReporte === 'acta-entrega-patrimonial' || nombreReporte === 'acta-baja-patrimonial') {
+      parametros.nombreEmpleado = nombreSeleccionadoLista;
+      parametros.legajoEmpleado = String(legajoSeleccionadoLista);
+      parametros.nombreEmpleadoEntrega = nombreLogueado;
+      parametros.legajoEmpleadoEntrega = String(legajoLogueado);
+    }
+
+    if (nombreReporte === 'acta-transferencia-patrimonial') {
+      parametros.legajoEmpleado = String(legajoLogueado);
+      parametros.legajoEmpleadoEntrega = String(legajoSeleccionadoLista);
+      parametros.legajoEmpleadoRecibe = String(this.empleadoSeleccionado.legajo);
+      parametros.nombreEmpleado = nombreLogueado;
+      parametros.nombreEmpleadoEntrega = nombreSeleccionadoLista;
+      parametros.nombreEmpleadoRecibe = this.empleadoSeleccionado.nombre;
     }
   
     const requestDto = {
@@ -525,83 +676,12 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
   
-
   //download
       /*const a = document.createElement('a');
       a.href = url;
       a.download = 'acta-alta-patrimonial.pdf';
       a.click();
       window.URL.revokeObjectURL(url);*/
-
-  confirmarQuitarCustodia(): void {
-    const legajo = this.menuData?.empleado?.legajo;
-    const nombre = this.menuData?.empleado?.nombre;
-  
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
-      data: {
-        message: `¿Está Seguro Que Desea Quitar De Custodia El Stock Seleccionado Al Empleado ${legajo} ${nombre}?`
-      }
-    });
-  
-    dialogRef.afterClosed().subscribe(result => {
-      if (result === true) {
-        //this.quitarCustodiaSeleccionada();
-      }
-    });
-  }
-
-  /*quitarCustodiaSeleccionada(): void {
-    const items = this.stockParaAsignar.map(stock => ({
-      stockId: stock.stock.id!,
-      cantidad: stock.cantidad
-    }));
-  
-    if (items.length) {
-      this.stockService.quitarCustodia(items).subscribe(() => {
-        this.stockService.showSuccessMessage('Stock Quitado De Custodia Con Éxito', 5);
-        this.stockParaAsignar = [];
-        this.stockParaAsignarDS.data = [];
-        this.loadStock();
-      });
-    }
-  }*/
-
-  confirmarTransferencia(): void {
-    const legajoDestino = this.menuData?.empleado?.legajo;
-    const nombre = this.menuData?.empleado?.nombre;
-  
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
-      data: {
-        message: `¿Está Seguro Que Desea Transferir El Stock Seleccionado Al Empleado ${legajoDestino} ${nombre}?`
-      }
-    });
-  
-    dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        this.transferirStockSeleccionado();
-      }
-    });
-  }
-
-  transferirStockSeleccionado(): void {
-
-    const items = this.stockParaAsignar.map(stock => ({
-      stockId: stock.stock.id!,
-      cantidad: stock.cantidad
-    }));
-    const legajoDestino = this.menuData?.empleado?.legajo;
-  
-    if (items.length && legajoDestino) {
-      this.stockService.asignarCustodia(items, legajoDestino).subscribe(() => {
-        this.stockService.showSuccessMessage('Stock Transferido Con Éxito', 5);
-        this.stockParaAsignar = [];
-        this.stockParaAsignarDS.data = [];
-        this.loadStock();
-      });
-    }
-  }
 
   eliminar(stock: StockParaAsignar): void {
     this.stockParaAsignar = this.stockParaAsignar.filter(s => s.stock.id !== stock.stock.id);

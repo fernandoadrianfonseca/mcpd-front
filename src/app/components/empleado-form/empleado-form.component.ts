@@ -214,7 +214,7 @@ export class EmpleadoFormComponent implements OnInit {
   }
   
   quitarStock(empleado: Empleado) {
-    const data = { modoQuitar: true, empleado };
+    const data = { modoQuitar: true, empleado: empleado, empleadoLogueado: this.menuData?.empleadoLogueado };
     window.dispatchEvent(new CustomEvent('navegarComponente', {
       detail: {
         componente: StockFormComponent,
@@ -224,7 +224,7 @@ export class EmpleadoFormComponent implements OnInit {
   }
   
   transferirStock(empleado: Empleado) {
-    const data = { modoTransferir: true, empleado };
+    const data = { modoTransferir: true, empleado: empleado, empleadoLogueado: this.menuData?.empleadoLogueado };
     window.dispatchEvent(new CustomEvent('navegarComponente', {
       detail: {
         componente: StockFormComponent,

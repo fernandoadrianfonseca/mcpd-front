@@ -126,11 +126,26 @@
           <tr mat-header-row *matHeaderRowDef="displayedColumnsAsignacion"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumnsAsignacion;"></tr>
         </table>
+
+        <mat-card-title *ngIf="modoTransferir">Empleado A Transferir</mat-card-title>
+        <mat-form-field *ngIf="modoTransferir" (click)="abrirAutocomplete()" appearance="outline" class="empleado-selector">
+          <mat-label>Seleccionar Empleado A Transferir</mat-label>
+          <input type="text" matInput [formControl]="empleadoControl" 
+                             [matAutocomplete]="autoEmpleado"
+                             placeholder="Buscar Empleado A Transferir...">
+          <mat-autocomplete #autoEmpleado="matAutocomplete" [displayWith]="displayEmpleado" (optionSelected)="onEmpleadoSeleccionado($event)">
+            <mat-option *ngFor="let empleado of empleadosFiltrados | async" [value]="empleado">
+              {{ empleado.legajo }} - {{ empleado.nombre }}
+            </mat-option>
+          </mat-autocomplete>
+        </mat-form-field>
     
         <div class="botones">
           <button mat-raised-button color="primary" *ngIf="modoAsignar" [disabled]="stockParaAsignar.length === 0" (click)="confirmarAsignacion()">Asignar</button>
-          <button mat-raised-button color="primary" *ngIf="modoQuitar" (click)="confirmarQuitarCustodia()">Quitar</button>
-          <button mat-raised-button color="primary" *ngIf="modoTransferir" (click)="confirmarTransferencia()">Transferir</button>
+          <button mat-raised-button color="primary" *ngIf="modoQuitar" [disabled]="stockParaAsignar.length === 0" (click)="confirmarQuitarCustodia()">Quitar</button>
+          <button mat-raised-button color="primary" *ngIf="modoTransferir" 
+                                                    [disabled]="stockParaAsignar.length === 0 || !empleadoSeleccionado" 
+                                                    (click)="confirmarTransferencia()">Transferir</button>
           <button mat-raised-button color="warn" (click)="cancelar()">Cancelar</button>
         </div>
       </mat-card-content>
@@ -138,9 +153,8 @@
   
     <!-- TABLA DE STOCK -->
     <mat-card>
-      <mat-card-title *ngIf="modoCustodia || modoQuitar">Stock Asignado Al Legajo {{ legajoCustodia }} {{menuData.empleado.nombre}}</mat-card-title>
+      <mat-card-title *ngIf="modoCustodia || modoQuitar || modoTransferir">Stock Asignado Al Legajo {{ legajoCustodia }} {{menuData.empleado.nombre}}</mat-card-title>
       <mat-card-title *ngIf="modoAsignar">Lista de Stock Disponible Sin Custodia</mat-card-title>
-      <mat-card-title *ngIf="modoTransferir">Lista de Stock Con Custodia</mat-card-title>
       <mat-card-title *ngIf="!modoCustodia && !modoQuitar && !modoTransferir && !modoAsignar">Lista de Stock</mat-card-title>
       <mat-card-content>
 
