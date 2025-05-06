@@ -49,7 +49,7 @@ export class MainComponent implements OnInit, OnDestroy {
           { label: 'Categorías', icon: 'view_list', component: CategoriaFormComponent, data:null },
           { label: 'Productos', icon: 'category', component: ProductoFormComponent, data:null },
           { label: 'Stock', icon: 'inventory', component: StockFormComponent, data: {empleadoLogueado: this.usuario} },
-          { label: 'Custodia', icon: 'supervisor_account', component: EmpleadoFormComponent, data: { modoCustodia: true } }
+          { label: 'Custodia', icon: 'supervisor_account', component: EmpleadoFormComponent, data: { modoCustodia: true, empleadoLogueado: this.usuario } }
         ],
       },
       {

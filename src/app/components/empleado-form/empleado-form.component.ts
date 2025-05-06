@@ -194,7 +194,7 @@ export class EmpleadoFormComponent implements OnInit {
   }
 
   listarStock(empleado: Empleado) {
-    const data = { modoCustodia: true, empleado: empleado };
+    const data = { modoCustodia: true, empleado: empleado, empleadoLogueado: this.menuData?.empleadoLogueado };
     window.dispatchEvent(new CustomEvent('navegarComponente', {
       detail: {
         componente: StockFormComponent,
@@ -204,7 +204,7 @@ export class EmpleadoFormComponent implements OnInit {
   }
   
   asignarStock(empleado: Empleado) {
-    const data = { modoAsignar: true, empleado };
+    const data = { modoAsignar: true, empleado: empleado, empleadoLogueado: this.menuData?.empleadoLogueado };
     window.dispatchEvent(new CustomEvent('navegarComponente', {
       detail: {
         componente: StockFormComponent,

@@ -453,23 +453,34 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   asignarStockYGenerarReporte(): void {
-    
+    const legajo = this.menuData?.empleado?.legajo;
+    const nombre = this.menuData?.empleado?.nombre;
+  
     const items = this.stockParaAsignar.map(stock => ({
       stockId: stock.stock.id!,
       cantidad: stock.cantidad,
       observaciones: stock.observaciones
     }));
-    const legajo = this.menuData?.empleado?.legajo;
-    const nombre = this.menuData?.empleado?.nombre;
   
     if (items.length && legajo) {
       this.stockService.asignarCustodia(items, legajo).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
   
-        // Generar reporte
-        this.generarReporteAsignacion();
+        // Separar consumibles y no consumibles
+        const consumibles = this.stockParaAsignar.filter(i => i.stock.consumible);
+        const noConsumibles = this.stockParaAsignar.filter(i => !i.stock.consumible);
   
-        // Limpiar selección
+        // Generar reporte de consumibles
+        if (consumibles.length) {
+          this.generarReporteAsignacion(consumibles, 'acta-entrega-patrimonial');
+        }
+  
+        // Generar reporte de no consumibles
+        if (noConsumibles.length) {
+          this.generarReporteAsignacion(noConsumibles, 'acta-alta-patrimonial');
+        }
+  
+        // Limpiar selección y recargar stock
         this.stockParaAsignar = [];
         this.stockParaAsignarDS.data = [];
         this.loadStock();
@@ -477,38 +488,50 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }
   }
 
-  generarReporteAsignacion(): void {
+  generarReporteAsignacion(stockAsignado: StockParaAsignar[], nombreReporte: string): void {
     const legajo = this.menuData?.empleado?.legajo;
+    const legajoEntrega = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
+    const nombreEntrega = this.menuData?.empleadoLogueado?.nombre;
   
-    const datos = this.stockParaAsignar.map(item => ({
+    const datos = stockAsignado.map(item => ({
       cantidad: item.cantidad,
-      descripcion: item.stock.productoNombre,
-      oc: '0', //CHECK
+      descripcion: [item.stock.productoNombre, item.stock.marca, item.stock.detalle]
+                    .filter(part => part?.trim?.()).join(' '),
+      oc: '0',
       remito: '0'
     }));
   
+    const parametros: any = {
+      nombreEmpleado: nombre,
+      legajoEmpleado: String(legajo)
+    };
+  
+    // Si el reporte es de entrega, agregamos los parámetros de entrega
+    if (nombreReporte === 'acta-entrega-patrimonial') {
+      parametros.nombreEmpleadoEntrega = nombreEntrega;
+      parametros.legajoEmpleadoEntrega = String(legajoEntrega);
+    }
+  
     const requestDto = {
-      nombreReporte: 'acta-alta-patrimonial',
-      parametros: {
-        nombreEmpleado: nombre,
-        legajoEmpleado: String(legajo)
-      },
-      datos: datos
+      nombreReporte,
+      parametros,
+      datos
     };
   
     this.stockService.generarReporteConLista(requestDto).subscribe(blob => {
       const url = window.URL.createObjectURL(blob);
       window.open(url);
+    });
+  }
+  
 
-      //download
+  //download
       /*const a = document.createElement('a');
       a.href = url;
       a.download = 'acta-alta-patrimonial.pdf';
       a.click();
       window.URL.revokeObjectURL(url);*/
-    });
-  }
 
   confirmarQuitarCustodia(): void {
     const legajo = this.menuData?.empleado?.legajo;
@@ -660,7 +683,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         const cantidadAdicional = +result.cantidad;
-        const empleado = this.menuData?.empleado;
+        const empleado = this.menuData?.empleadoLogueado;
         const legajo = empleado?.legajo;
         const total = stock.cantidad + cantidadAdicional;
   
@@ -704,7 +727,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
               });
   
             } else {
-              this.stockService.showSuccessMessage('Stock Registrado Sin N° De Serie', 5);
+              this.stockService.showSuccessMessage('Stock Registrado', 5);
               this.loadStock();
             }
           });
@@ -750,7 +773,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           return;
         }
   
-        const empleado = this.menuData?.empleado;
+        const empleado = this.menuData?.empleadoLogueado;
         const legajo = empleado?.legajo;
   
         const stockActualizado: ProductosStock = {
