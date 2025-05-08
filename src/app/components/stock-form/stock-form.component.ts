@@ -23,7 +23,7 @@ import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.compone
 import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-table-dialog.component';
 import { MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 
-interface StockParaAsignar {
+interface StockParaOperar {
   stock: ProductosStock;
   cantidad: number;
   observaciones: string | null;
@@ -41,12 +41,12 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   categorias: Categoria[] = [];
   productos: Producto[] = [];
   stockItems: ProductosStock[] = [];
-  stockParaAsignar: StockParaAsignar[] = [];
+  stockParaOperar: StockParaOperar[] = [];
   empleados: Empleado[] = [];
   displayedColumns: string[] = [];
   displayedColumnsAsignacion: string[] = [];
   dataSource = new MatTableDataSource<ProductosStock>();
-  stockParaAsignarDS = new MatTableDataSource<StockParaAsignar>();
+  stockParaOperarDS = new MatTableDataSource<StockParaOperar>();
 
   stockEditando: ProductosStock | null = null;
   filteredCategorias!: Observable<Categoria[]>;
@@ -131,7 +131,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   tieneConsumible(): boolean {
-    return this.stockParaAsignar.some(item => item.stock.consumible);
+    return this.stockParaOperar.some(item => item.stock.consumible);
   }
 
   abrirAutocomplete(): void {
@@ -433,7 +433,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         fields: [
           { name: 'cantidad', label: `Cantidad a ${tituloAccion}`, type: 'number', required: true },
           { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-          { name: 'numerosDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id }
+          { name: 'numerosDeSerie',
+            label: 'Números de Serie',
+            type: 'serie-selector',
+            required: false,
+            stockId: stock.id,
+            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar',
+            legajoEmpleado: this.menuData.empleado.legajo }
         ]
       }
     });
@@ -487,15 +493,15 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           }
         }
   
-        const stockAsignado: StockParaAsignar = {
+        const stockAsignado: StockParaOperar = {
           stock: stock,
           cantidad: cantidadIngresada,
           observaciones: result.observaciones?.trim() || null,
           numerosDeSerie: result.numerosDeSerie ?? []
         };
   
-        this.stockParaAsignar.push(stockAsignado);
-        this.stockParaAsignarDS.data = [...this.stockParaAsignar]; // ✅ Forzar actualización
+        this.stockParaOperar.push(stockAsignado);
+        this.stockParaOperarDS.data = [...this.stockParaOperar]; // ✅ Forzar actualización
       }
     });
   }
@@ -522,13 +528,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     const legajo = this.menuData?.empleado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
   
-    const items = this.stockParaAsignar.map(stock => ({
+    const items = this.stockParaOperar.map(stock => ({
       stockId: stock.stock.id!,
       cantidad: stock.cantidad,
       observaciones: stock.observaciones ?? undefined
     }));
 
-    const numerosDeSerie: number[] = this.stockParaAsignar.flatMap(stock =>
+    const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
       stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
     );
 
@@ -551,8 +557,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
   
         // Separar consumibles y no consumibles
-        const consumibles = this.stockParaAsignar.filter(i => i.stock.consumible);
-        const noConsumibles = this.stockParaAsignar.filter(i => !i.stock.consumible);
+        const consumibles = this.stockParaOperar.filter(i => i.stock.consumible);
+        const noConsumibles = this.stockParaOperar.filter(i => !i.stock.consumible);
   
         // Generar reporte de consumibles
         if (consumibles.length) {
@@ -565,8 +571,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         }
   
         // Limpiar selección y recargar stock
-        this.stockParaAsignar = [];
-        this.stockParaAsignarDS.data = [];
+        this.stockParaOperar = [];
+        this.stockParaOperarDS.data = [];
+        this.dependenciaControl.setValue(null);
         this.loadStock();
       });
     }
@@ -594,22 +601,41 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     const legajo = this.menuData?.empleado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
   
-    const items = this.stockParaAsignar.map(stock => ({
+    const items = this.stockParaOperar.map(stock => ({
       stockId: stock.stock.id!,
       cantidad: stock.cantidad,
       observaciones: stock.observaciones ?? undefined
     }));
+
+    const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
+      stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
+    );
+
+    // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
+    if (numerosDeSerie.length > 0) {
+      console.log('Números de Serie que se van a enviar:', numerosDeSerie);
+      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie).subscribe({
+        next: () => {
+          this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
+        },
+        error: (error) => {
+          console.error('Error al asignar números de serie:', error);
+          this.stockService.showErrorMessage('Error al asignar los números de serie', 5);
+        }
+      });
+    }
   
     if (items.length && legajo) {
       this.stockService.quitarCustodia(items, legajo).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Quitado Con Éxito', 5);
   
         // Generar reporte de baja
-        this.generarReporteAsignacion(this.stockParaAsignar, 'acta-baja-patrimonial');
+        this.generarReporteAsignacion(this.stockParaOperar, 'acta-baja-patrimonial');
   
         // Limpiar selección y recargar stock
-        this.stockParaAsignar = [];
-        this.stockParaAsignarDS.data = [];
+        this.stockParaOperar = [];
+        this.stockParaOperarDS.data = [];
+        this.dependenciaControl.setValue(null);
         this.loadStock();
       });
     }
@@ -639,28 +665,49 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     const legajoDestino = this.empleadoSeleccionado.legajo;
     const legajoOrigen = this.menuData?.empleado?.legajo;
     const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
-    const items = this.stockParaAsignar.map(stock => ({
+    const items = this.stockParaOperar.map(stock => ({
       stockId: stock.stock.id!,
       cantidad: stock.cantidad,
       observaciones: stock.observaciones ?? undefined
     }));
+
+    const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
+      stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
+    );
+
+    // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
+    if (numerosDeSerie.length > 0) {
+      console.log('Números de Serie que se van a enviar:', numerosDeSerie);
+      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajoDestino).subscribe({
+        next: () => {
+          this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
+        },
+        error: (error) => {
+          console.error('Error al asignar números de serie:', error);
+          this.stockService.showErrorMessage('Error al asignar los números de serie', 5);
+        }
+      });
+    }
   
     if (items.length && legajoOrigen && legajoDestino) {
       this.stockService.transferirCustodia(items, legajoOrigen, legajoDestino, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Transferido Con Éxito', 5);
   
         // Generar reporte de transferencia
-        this.generarReporteAsignacion(this.stockParaAsignar, 'acta-transferencia-patrimonial');
+        this.generarReporteAsignacion(this.stockParaOperar, 'acta-transferencia-patrimonial');
   
         // Limpiar selección y recargar stock
-        this.stockParaAsignar = [];
-        this.stockParaAsignarDS.data = [];
+        this.stockParaOperar = [];
+        this.stockParaOperarDS.data = [];
+        this.dependenciaControl.setValue(null);
         this.loadStock();
       });
     }
   }
 
-  generarReporteAsignacion(stockAsignado: StockParaAsignar[], nombreReporte: string): void {
+  generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string): void {
+
+    let cantidadCopias=1;
     const legajoSeleccionadoLista = this.menuData?.empleado?.legajo;
     const nombreSeleccionadoLista = this.menuData?.empleado?.nombre;
     const legajoLogueado = this.menuData?.empleadoLogueado?.legajo;
@@ -688,6 +735,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       parametros.dependenciaAutoriza = dependenciaSeleccionada;
     }
 
+    if (nombreReporte === 'acta-entrega-patrimonial') {
+      cantidadCopias=2;
+    }
+
     if (nombreReporte === 'acta-transferencia-patrimonial') {
       parametros.legajoEmpleado = String(legajoLogueado);
       parametros.legajoEmpleadoEntrega = String(legajoSeleccionadoLista);
@@ -699,6 +750,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
     const requestDto = {
       nombreReporte,
+      cantidadCopias,
       parametros,
       datos
     };
@@ -710,20 +762,20 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
   
   //download
-      /*const a = document.createElement('a');
-      a.href = url;
-      a.download = 'acta-alta-patrimonial.pdf';
-      a.click();
-      window.URL.revokeObjectURL(url);*/
+  /*const a = document.createElement('a');
+  a.href = url;
+  a.download = 'acta-alta-patrimonial.pdf';
+  a.click();
+  window.URL.revokeObjectURL(url);*/
 
-  eliminar(stock: StockParaAsignar): void {
-    this.stockParaAsignar = this.stockParaAsignar.filter(s => s.stock.id !== stock.stock.id);
-    this.stockParaAsignarDS.data = [...this.stockParaAsignar];
+  eliminar(stock: StockParaOperar): void {
+    this.stockParaOperar = this.stockParaOperar.filter(s => s.stock.id !== stock.stock.id);
+    this.stockParaOperarDS.data = [...this.stockParaOperar];
   }
   
   cancelar(): void {
-    this.stockParaAsignar = [];
-    this.stockParaAsignarDS.data = [];
+    this.stockParaOperar = [];
+    this.stockParaOperarDS.data = [];
   }
 
   /** ✅ Eliminar un stock */

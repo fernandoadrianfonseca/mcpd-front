@@ -82,7 +82,7 @@
       <mat-card-title *ngIf="modoQuitar">Stock Seleccionado Para Quitar Custodia</mat-card-title>
       <mat-card-title *ngIf="modoTransferir">Stock Seleccionado Para Transferir</mat-card-title>
       <mat-card-content>
-        <table mat-table [dataSource]="stockParaAsignarDS" class="mat-elevation-z8" matSort>
+        <table mat-table [dataSource]="stockParaOperarDS" class="mat-elevation-z8" matSort>
     
           <ng-container matColumnDef="productoNombre">
             <th mat-header-cell *matHeaderCellDef> Producto </th>
@@ -153,11 +153,11 @@
     
         <div class="botones">
           <button mat-raised-button color="primary" *ngIf="modoAsignar" 
-                                                    [disabled]="stockParaAsignar.length === 0 || (!dependenciaControl.value && tieneConsumible())"
+                                                    [disabled]="stockParaOperar.length === 0 || (!dependenciaControl.value && tieneConsumible())"
                                                     (click)="confirmarAsignacion()">Asignar</button>
-          <button mat-raised-button color="primary" *ngIf="modoQuitar" [disabled]="stockParaAsignar.length === 0" (click)="confirmarQuitarCustodia()">Quitar</button>
+          <button mat-raised-button color="primary" *ngIf="modoQuitar" [disabled]="stockParaOperar.length === 0" (click)="confirmarQuitarCustodia()">Quitar</button>
           <button mat-raised-button color="primary" *ngIf="modoTransferir" 
-                                                    [disabled]="stockParaAsignar.length === 0 || !empleadoSeleccionado" 
+                                                    [disabled]="stockParaOperar.length === 0 || !empleadoSeleccionado" 
                                                     (click)="confirmarTransferencia()">Transferir</button>
           <button mat-raised-button color="warn" (click)="cancelar()">Cancelar</button>
         </div>

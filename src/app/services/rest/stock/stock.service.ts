@@ -85,8 +85,12 @@ export class StockService {
     return this.restService.get<any[]>(`numeros-de-serie/producto-stock/${id}/sin-custodia`);
   }
 
-  asignarCustodiaNumerosDeSerie(ids: number[], legajo: number): Observable<any> {
-    return this.restService.put<any>(`numeros-de-serie/asignar-custodia?legajo=${legajo}`, ids);
+  asignarCustodiaNumerosDeSerie(ids: number[], legajo?: number): Observable<any> {
+    const url = legajo != null
+      ? `numeros-de-serie/asignar-custodia?legajo=${legajo}`
+      : `numeros-de-serie/asignar-custodia`;
+  
+    return this.restService.put<any>(url, ids);
   }
 
   crearFlujoDeStock(flujo: any): Observable<any> {

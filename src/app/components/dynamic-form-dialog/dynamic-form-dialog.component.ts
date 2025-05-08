@@ -38,14 +38,21 @@ export class DynamicFormDialogComponent implements OnInit {
         controls[field.name] = this.fb.control([]);
 
         // 🚀 Llamar al servicio para obtener los números de serie
-        this.stockService.getNumerosDeSerieSinCustodiaPorStock(field.stockId)
-          .subscribe((data) => {
-            this.seriesDisponibles = data.map((item: any) => ({
-              label: item.numeroDeSerie,
-              value: item.id
-            }));
-            this.cdRef.detectChanges();
-          });
+        const observable = field.modo === 'asignar'
+          ? this.stockService.getNumerosDeSerieSinCustodiaPorStock(field.stockId)
+          : this.stockService.getNumerosDeSeriePorStock(field.stockId, {
+              activo: true,
+              empleadoCustodia: field.legajoEmpleado
+            });
+
+        observable.subscribe((data) => {
+          this.seriesDisponibles = data.map((item: any) => ({
+            label: item.numeroDeSerie,
+            value: item.id
+          }));
+          this.cdRef.detectChanges();
+        });
+        
       } else {
         controls[field.name] = field.required
           ? [field.default || '', Validators.required]
