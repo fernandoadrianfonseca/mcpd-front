@@ -12,7 +12,7 @@ import { EmpleadoFormComponent } from '../empleado-form/empleado-form.component'
 import { ProveedorFormComponent } from '../proveedor-form/proveedor-form.component';
 
 @Component({
-  selector: 'app-main',
+  selector: 'main',
   templateUrl: './main.component.html',
   styleUrls: ['./main.component.scss'],
   imports: [CommonModule, MaterialModule]
@@ -23,6 +23,10 @@ export class MainComponent implements OnInit, OnDestroy {
   private navigationHistory: { component: any, data?: any, url: string }[] = [];
   selectedComponent: any = null;
   selectedComponentData: any = null;
+  modoCustodia: boolean = false;
+  modoAsignar: boolean = false;
+  modoTransferir: boolean = false;
+  modoQuitar: boolean = false;
   usuario: any = null;
   menuItems : Array<any> = [];
 
@@ -39,6 +43,13 @@ export class MainComponent implements OnInit, OnDestroy {
     }
     window.addEventListener('popstate', this.handlePopState.bind(this));
     window.addEventListener('navegarComponente', this.navegarComponente.bind(this));
+
+    const queryParams = new URLSearchParams(window.location.search);
+    this.modoAsignar = queryParams.has('modo') && queryParams.get('modo') === 'asignar';
+    this.modoTransferir = queryParams.has('modo') && queryParams.get('modo') === 'transferir';
+    this.modoQuitar = queryParams.has('modo') && queryParams.get('modo') === 'quitar';
+    this.modoCustodia = queryParams.has('modo') && queryParams.get('modo') === 'custodia';
+
     this.menuItems = [
       {
         label: 'Patrimonio',
@@ -88,8 +99,24 @@ export class MainComponent implements OnInit, OnDestroy {
     if (lastEntry) {
       this.selectedComponent = lastEntry.component;
       this.selectedComponentData = lastEntry.data || {};
+  
+      // ✅ Restaurar los modos en base al historial
+      this.modoAsignar = this.selectedComponentData.modoAsignar ?? false;
+      this.modoTransferir = this.selectedComponentData.modoTransferir ?? false;
+      this.modoQuitar = this.selectedComponentData.modoQuitar ?? false;
+      this.modoCustodia = this.selectedComponentData.modoCustodia ?? false;
+  
+      // ✅ Actualizar el injector
+      this.customInjector = Injector.create({
+        providers: [
+          { provide: 'menuData', useValue: this.selectedComponentData }
+        ],
+        parent: this.injector
+      });
+  
     } else {
-      // Evita volver al login si no hay más historial
+      //console.warn("No hay más historial. Evitando volver al login.");
+      //this.location.replaceState('/main');
       history.pushState({}, '', '/main');
     }
   }
@@ -122,11 +149,22 @@ export class MainComponent implements OnInit, OnDestroy {
     this.selectedComponentData = data || {};
     this.customInjector = null; // reset cache para que el próximo render tenga el nuevo injector
     const label = component.name?.toLowerCase().replace(/component|form|_/g, '') || 'componente';
-    const url = `/main/${label}`;
+  
+    // ✅ Manejo de URL con query params
+    let url = `/main/${label}`;
+    if (data) {
+      const params = [];
+      if (data.modoAsignar) params.push('modo=asignar');
+      if (data.modoTransferir) params.push('modo=transferir');
+      if (data.modoQuitar) params.push('modo=quitar');
+      if (data.modoCustodia) params.push('modo=custodia');
+      if (params.length > 0) {
+        url += '?' + params.join('&');
+      }
+    }
+    
     this.navigationHistory.push({ component, data, url });
     history.pushState({}, '', url);
-    //this.location.replaceState(`/main/${label}`);
-    //this.location.go(`/main/${label}`);
   }
 
   logout(): void {

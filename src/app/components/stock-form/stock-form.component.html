@@ -127,6 +127,17 @@
           <tr mat-row *matRowDef="let row; columns: displayedColumnsAsignacion;"></tr>
         </table>
 
+        <!-- Campo Dependencia a Autorizar -->
+        <mat-card-title *ngIf="modoAsignar && tieneConsumible()">Dependencia a Autorizar</mat-card-title>
+        <mat-form-field *ngIf="modoAsignar && tieneConsumible()" appearance="outline" class="dependencia-selector">
+          <mat-label>Seleccionar Dependencia</mat-label>
+          <mat-select [formControl]="dependenciaControl" placeholder="Seleccione una Dependencia">
+            <mat-option *ngFor="let dependencia of dependencias" [value]="dependencia">
+              {{ dependencia }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
         <mat-card-title *ngIf="modoTransferir">Empleado A Transferir</mat-card-title>
         <mat-form-field *ngIf="modoTransferir" (click)="abrirAutocomplete()" appearance="outline" class="empleado-selector">
           <mat-label>Seleccionar Empleado A Transferir</mat-label>

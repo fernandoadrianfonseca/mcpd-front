@@ -59,6 +59,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   empleadoControl = new FormControl();
   empleadoSeleccionado: any = null;
   empleadosFiltrados: Observable<any[]> = of([]);
+  dependenciaControl = new FormControl();
+  dependencias: string[] = ['PATRIMONIO','RENTAS','DESPACHO','GOBIERNO','CATASTRO','ARCHIVO','HACIENDA','CONTADURIA','RRHH','BROMATOLOGIA','INFORMATICA',
+                            'PEDIDOS','RECAUDACION','OBRAS','LIQUIDACION','TESORERIA','COMPRAS'];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -124,6 +127,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.onTipoCustodiaChange();
+  }
+
+  tieneConsumible(): boolean {
+    return this.stockParaAsignar.some(item => item.stock.consumible);
   }
 
   abrirAutocomplete(): void {
@@ -636,6 +643,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     const nombreSeleccionadoLista = this.menuData?.empleado?.nombre;
     const legajoLogueado = this.menuData?.empleadoLogueado?.legajo;
     const nombreLogueado = this.menuData?.empleadoLogueado?.nombre;
+    const dependenciaSeleccionada = this.dependenciaControl.value;
   
     const datos = stockAsignado.map(item => ({
       cantidad: item.cantidad,
@@ -653,6 +661,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       parametros.legajoEmpleado = String(legajoSeleccionadoLista);
       parametros.nombreEmpleadoEntrega = nombreLogueado;
       parametros.legajoEmpleadoEntrega = String(legajoLogueado);
+      parametros.dependenciaAutoriza = dependenciaSeleccionada;
     }
 
     if (nombreReporte === 'acta-transferencia-patrimonial') {
