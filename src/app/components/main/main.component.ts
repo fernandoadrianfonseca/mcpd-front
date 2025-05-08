@@ -29,17 +29,22 @@ export class MainComponent implements OnInit, OnDestroy {
   modoQuitar: boolean = false;
   usuario: any = null;
   menuItems : Array<any> = [];
+  isDevelopment : boolean = false;
 
   constructor(private router: Router, private authService: AuthService, private injector: Injector, private location: Location) {}
 
   ngOnInit(): void {
+
+    this.isDevelopment = window.location.hostname === 'localhost' && window.location.port === '4200';
     const storedUser = localStorage.getItem('usuario');
     if (storedUser) {
       this.usuario = JSON.parse(storedUser);
       this.authService.initUnloadListener();
     }
     else{
-      this.router.navigate(['/'], { replaceUrl: true });
+      if (!this.isDevelopment) {
+        this.router.navigate(['/'], { replaceUrl: true });
+      }
     }
     window.addEventListener('popstate', this.handlePopState.bind(this));
     window.addEventListener('navegarComponente', this.navegarComponente.bind(this));
@@ -85,9 +90,11 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.authService.clean();
-    window.removeEventListener('navegarComponente', this.navegarComponente.bind(this));
-    console.log('El componente Main se destruyó');
+    if (!this.isDevelopment) {
+      this.authService.clean();
+      window.removeEventListener('navegarComponente', this.navegarComponente.bind(this));
+      console.log('El componente Main se destruyó');
+    } 
   }
 
   handlePopState(event: PopStateEvent): void {
