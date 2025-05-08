@@ -152,7 +152,9 @@
         </mat-form-field>
     
         <div class="botones">
-          <button mat-raised-button color="primary" *ngIf="modoAsignar" [disabled]="stockParaAsignar.length === 0" (click)="confirmarAsignacion()">Asignar</button>
+          <button mat-raised-button color="primary" *ngIf="modoAsignar" 
+                                                    [disabled]="stockParaAsignar.length === 0 || (!dependenciaControl.value && tieneConsumible())"
+                                                    (click)="confirmarAsignacion()">Asignar</button>
           <button mat-raised-button color="primary" *ngIf="modoQuitar" [disabled]="stockParaAsignar.length === 0" (click)="confirmarQuitarCustodia()">Quitar</button>
           <button mat-raised-button color="primary" *ngIf="modoTransferir" 
                                                     [disabled]="stockParaAsignar.length === 0 || !empleadoSeleccionado" 

@@ -27,6 +27,7 @@ interface StockParaAsignar {
   stock: ProductosStock;
   cantidad: number;
   observaciones: string | null;
+  numerosDeSerie?: [];
 }
 
 @Component({
@@ -373,7 +374,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       tipo: stock.tipo,
       marca: stock.marca,
       modelo: stock.modelo,
-      detalle: stock.detalle
+      detalle: stock.detalle,
+      consumible: stock.consumible ? 'true' : 'false'
     });
   
     // ✅ **Actualizar `mat-autocomplete` correctamente**
@@ -430,7 +432,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         title: `${tituloAccion} Producto ${stock.productoNombre} ${stock.detalle ?? ''}${legajoText}`,
         fields: [
           { name: 'cantidad', label: `Cantidad a ${tituloAccion}`, type: 'number', required: true },
-          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
+          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+          { name: 'numerosDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id }
         ]
       }
     });
@@ -487,7 +490,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         const stockAsignado: StockParaAsignar = {
           stock: stock,
           cantidad: cantidadIngresada,
-          observaciones: result.observaciones?.trim() || null
+          observaciones: result.observaciones?.trim() || null,
+          numerosDeSerie: result.numerosDeSerie ?? []
         };
   
         this.stockParaAsignar.push(stockAsignado);
@@ -523,6 +527,24 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       cantidad: stock.cantidad,
       observaciones: stock.observaciones ?? undefined
     }));
+
+    const numerosDeSerie: number[] = this.stockParaAsignar.flatMap(stock =>
+      stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
+    );
+
+    // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
+    if (numerosDeSerie.length > 0) {
+      console.log('Números de Serie que se van a enviar:', numerosDeSerie);
+      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajo).subscribe({
+        next: () => {
+          this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
+        },
+        error: (error) => {
+          console.error('Error al asignar números de serie:', error);
+          this.stockService.showErrorMessage('Error al asignar los números de serie', 5);
+        }
+      });
+    }
   
     if (items.length && legajo) {
       this.stockService.asignarCustodia(items, legajo).subscribe(() => {
@@ -656,7 +678,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     let parametros: any = {};
   
     // Si el reporte es de entrega, agregamos los parámetros de entrega
-    if (nombreReporte === 'acta-entrega-patrimonial' || nombreReporte === 'acta-baja-patrimonial') {
+    if (nombreReporte === 'acta-alta-patrimonial' 
+              || nombreReporte === 'acta-entrega-patrimonial' 
+                    || nombreReporte === 'acta-baja-patrimonial') {
       parametros.nombreEmpleado = nombreSeleccionadoLista;
       parametros.legajoEmpleado = String(legajoSeleccionadoLista);
       parametros.nombreEmpleadoEntrega = nombreLogueado;

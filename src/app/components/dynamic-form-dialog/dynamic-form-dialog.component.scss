@@ -78,3 +78,27 @@ button[mat-raised-button]:hover:not(:disabled) {
 .multiple-field {
   flex: 1;
 }
+
+.series-selector-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.serie-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background-color: #e3f2fd;
+  border-radius: 20px;
+  color: #1976d2;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.serie-chip mat-icon {
+  font-size: 16px;
+  cursor: pointer;
+}

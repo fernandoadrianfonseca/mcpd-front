@@ -16,11 +16,14 @@ export class AuthService {
   private readonly sessionKey = 'sessionId';
   private currentSessionId: string | null = null;
   private currentUser: string | null = null;
+  private isDevelopment : boolean = false;
 
   constructor(private restService: RestService,
               private router: Router,
               private snackBar: MatSnackBar,
               private dialogService: DialogService) {
+
+    this.isDevelopment = window.location.hostname === 'localhost' && window.location.port === '4200';            
 
     // ✅ Guardar la sesión actual al iniciar
     this.currentSessionId = this.getSessionId();
@@ -83,9 +86,11 @@ export class AuthService {
   }
 
   initUnloadListener() {
-    window.addEventListener('beforeunload', () => {
-      this.clean();
-    });
+    if(!this.isDevelopment){
+      window.addEventListener('beforeunload', () => {
+        this.clean();
+      });
+    }
   }
 
   /** ✅ Obtener ID de sesión actual */

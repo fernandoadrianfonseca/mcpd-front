@@ -59,6 +59,10 @@ export class StockService {
     this.restService.showMessage(message, 'success', duration*1000, 'top', false);
   }
 
+  showErrorMessage(message: string, duration: number){
+    this.restService.showMessage(message, 'error', duration*1000, 'top', false);
+  }
+
   generarReporteConLista(requestDto: any): Observable<Blob> {
     return this.restService.post<Blob>('reportes/pdf', requestDto, { responseType: 'blob' });
   }
@@ -75,6 +79,14 @@ export class StockService {
     }
   
     return this.restService.get<any[]>(`numeros-de-serie/producto-stock/${id}`, { params });
+  }
+
+  getNumerosDeSerieSinCustodiaPorStock(id: number): Observable<any[]> {
+    return this.restService.get<any[]>(`numeros-de-serie/producto-stock/${id}/sin-custodia`);
+  }
+
+  asignarCustodiaNumerosDeSerie(ids: number[], legajo: number): Observable<any> {
+    return this.restService.put<any>(`numeros-de-serie/asignar-custodia?legajo=${legajo}`, ids);
   }
 
   crearFlujoDeStock(flujo: any): Observable<any> {
