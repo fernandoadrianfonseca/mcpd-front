@@ -343,7 +343,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
   loadEmpleados(): void {
     this.empleadoService.getEmpleados().subscribe(data => {
-      this.empleados = data;
+      this.empleados = data.filter(empleado=>empleado.legajo!=this.menuData.empleado.legajo);
       this.empleadosFiltrados = this.empleadoControl.valueChanges.pipe(
         startWith(''),
         map(value => typeof value === 'string' ? value : `${value.legajo} ${value.nombre}`),

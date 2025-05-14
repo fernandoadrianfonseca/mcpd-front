@@ -78,8 +78,8 @@
     </form>
 
     <mat-card *ngIf="modoAsignar || modoQuitar || modoTransferir">
-      <mat-card-title *ngIf="modoAsignar">Stock Seleccionado Para Asignar Custodia</mat-card-title>
-      <mat-card-title *ngIf="modoQuitar">Stock Seleccionado Para Quitar Custodia</mat-card-title>
+      <mat-card-title *ngIf="modoAsignar">Stock Seleccionado Para Asignar A Custodia Al Legajo {{ legajoCustodia }} {{menuData.empleado.nombre}}</mat-card-title>
+      <mat-card-title *ngIf="modoQuitar">Stock Seleccionado Para Quitar De Custodia Al Legajo {{ legajoCustodia }} {{menuData.empleado.nombre}}</mat-card-title>
       <mat-card-title *ngIf="modoTransferir">Stock Seleccionado Para Transferir</mat-card-title>
       <mat-card-content>
         <table mat-table [dataSource]="stockParaOperarDS" class="mat-elevation-z8" matSort>
