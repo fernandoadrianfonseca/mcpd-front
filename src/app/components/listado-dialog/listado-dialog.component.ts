@@ -42,8 +42,8 @@ export class ListadoDialogComponent implements AfterViewInit{
   formatValue(row: any, column: string): any {
     let value = column.split('.').reduce((acc, key) => acc?.[key], row);
   
-    if (column === 'empleadoCustodia.legajo') {
-      return value ?? 'Sin Custodia';
+    if (column === 'empleadoCustodia') {
+      return value ?? '-';
     }
   
     if (column === 'fecha' && value) {

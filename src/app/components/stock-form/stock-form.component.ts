@@ -112,6 +112,15 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       );
     });
 
+    // ✅ Listener para detectar cambios en "tipo" de stock
+    this.stockForm.get('tipo')?.valueChanges.subscribe((value: string) => {
+      if (value === 'Insumos') {
+        this.stockForm.get('consumible')?.setValue('true');
+      } else if (value === 'Dotacion Fija') {
+        this.stockForm.get('consumible')?.setValue('false');
+      }
+    });
+
     // Obtener productos
     this.productoService.getProductos().subscribe(data => {
       this.productos = data;
@@ -979,13 +988,15 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       // Formatear datos antes de mostrar
       const rows = flujos.map(flujo => ({
         ...flujo,
-        tipo: flujo.tipo === 'custodia_alta'
-                                ? 'Custodia Alta'
-                                : flujo.tipo === 'custodia_baja'
-                                  ? 'Custodia Baja'
+        tipo: flujo.tipo === 'custodia_alta' && stock.consumible
+                                ? 'Entrega Alta' : flujo.tipo === 'custodia_alta' && !stock.consumible ? 'Custodia Alta'
+                                : flujo.tipo === 'custodia_baja' && stock.consumible
+                                  ? 'Entrega Baja' : flujo.tipo === 'custodia_baja' && !stock.consumible ? 'Custodia Baja'
                                   : flujo.tipo.charAt(0).toUpperCase() + flujo.tipo.slice(1).toLowerCase(),
         cantidad: flujo.tipo === 'baja' ? `-${flujo.cantidad}` : flujo.cantidad,
-        remito: flujo.remito ? flujo.remito : 'Sin Remito'
+        remito: flujo.remito ? flujo.remito : '-',
+        totalLegajoCustodia: flujo.tipo === 'baja' || flujo.tipo === 'alta' ? '-' : flujo.totalLegajoCustodia,
+        observaciones : flujo.observaciones ? flujo.observaciones : '-'
       }));
 
       const base = `Flujo de Stock ${legajoCustodia ? 'en Custodia' : ''} de ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`;
@@ -1040,7 +1051,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           columns: ['empleadoCustodia', 'totalLegajoCustodia'],
           columnNames: {
             empleadoCustodia: 'Legajo Custodia',
-            totalLegajoCustodia: 'Total Custodia'
+            totalLegajoCustodia: stock.consumible ? 'Total Asignado' : 'Total Custodia'
           },
           rows: custodias
         }
