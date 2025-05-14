@@ -166,8 +166,8 @@
   
     <!-- TABLA DE STOCK -->
     <mat-card>
-      <mat-card-title *ngIf="modoCustodia || modoQuitar || modoTransferir">Stock Asignado Al Legajo {{ legajoCustodia }} {{menuData.empleado.nombre}}</mat-card-title>
-      <mat-card-title *ngIf="modoAsignar">Lista de Stock Disponible Sin Custodia</mat-card-title>
+      <mat-card-title *ngIf="modoCustodia || modoQuitar || modoTransferir">Stock En Custodia Por El Legajo {{ legajoCustodia }} {{menuData.empleado.nombre}}</mat-card-title>
+      <mat-card-title *ngIf="modoAsignar">Lista de Stock Disponible Sin Asignar</mat-card-title>
       <mat-card-title *ngIf="!modoCustodia && !modoQuitar && !modoTransferir && !modoAsignar">Lista de Stock</mat-card-title>
       <mat-card-content>
 

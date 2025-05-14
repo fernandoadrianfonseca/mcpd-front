@@ -334,6 +334,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
             : this.stockService.getStock();
   
     stockObservable.subscribe(data => {
+      if((this.modoCustodia || this.modoQuitar) && this.legajoCustodia !== null){
+        data=data.filter(stock=>stock.consumible==false);
+      }
       this.stockItems = data;
       this.dataSource.data = this.stockItems;
       this.updatePaginator();
