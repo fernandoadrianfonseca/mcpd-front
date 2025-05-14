@@ -16,6 +16,7 @@ export class DynamicFormDialogComponent implements OnInit {
   form: FormGroup;
   multipleFields: { [key: string]: FormArray } = {};
   seriesDisponibles: any[] = [];
+  modoActual: 'asignar' | 'transferir' | 'quitar' | null = null;
 
   constructor(
     public dialogRef: MatDialogRef<DynamicFormDialogComponent>,
@@ -27,6 +28,8 @@ export class DynamicFormDialogComponent implements OnInit {
   ) {
     const controls: any = {};
 
+    const fieldSerieSelector = data.fields.find(field => field.type === 'serie-selector');
+    this.modoActual = fieldSerieSelector ? fieldSerieSelector.modo : null;
     data.fields.forEach(field => {
       if (field.multiple) {
         const array = this.fb.array([this.fb.control('', field.required ? Validators.required : null)]);
