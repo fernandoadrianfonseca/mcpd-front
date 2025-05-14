@@ -507,13 +507,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   confirmarAsignacion(): void {
-    const legajo = this.menuData?.empleado?.legajo;
+    const legajoCustodia = this.menuData?.empleado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
   
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
-        message: `¿Está Seguro Que Desea Asignar El Stock Seleccionado Al Empleado ${legajo} ${nombre}?`
+        message: `¿Está Seguro Que Desea Asignar El Stock Seleccionado Al Empleado ${legajoCustodia} ${nombre}?`
       }
     });
   
@@ -525,7 +525,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   asignarStockYGenerarReporte(): void {
-    const legajo = this.menuData?.empleado?.legajo;
+    const legajoCustodia = this.menuData?.empleado?.legajo;
+    const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
   
     const items = this.stockParaOperar.map(stock => ({
@@ -541,7 +542,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
     if (numerosDeSerie.length > 0) {
       console.log('Números de Serie que se van a enviar:', numerosDeSerie);
-      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajo).subscribe({
+      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajoCustodia).subscribe({
         next: () => {
           this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
         },
@@ -552,8 +553,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       });
     }
   
-    if (items.length && legajo) {
-      this.stockService.asignarCustodia(items, legajo).subscribe(() => {
+    if (items.length && legajoCustodia) {
+      this.stockService.asignarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
   
         // Separar consumibles y no consumibles
@@ -580,13 +581,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   confirmarQuitarCustodia(): void {
-    const legajo = this.menuData?.empleado?.legajo;
+    const legajoCustodia = this.menuData?.empleado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
   
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
       data: {
-        message: `¿Está Seguro Que Desea Quitar De Custodia El Stock Seleccionado Al Empleado ${legajo} ${nombre}?`
+        message: `¿Está Seguro Que Desea Quitar De Custodia El Stock Seleccionado Al Empleado ${legajoCustodia} ${nombre}?`
       }
     });
   
@@ -598,7 +599,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   quitarCustodiaYGenerarReporte(): void {
-    const legajo = this.menuData?.empleado?.legajo;
+    const legajoCustodia = this.menuData?.empleado?.legajo;
+    const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
   
     const items = this.stockParaOperar.map(stock => ({
@@ -625,8 +627,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       });
     }
   
-    if (items.length && legajo) {
-      this.stockService.quitarCustodia(items, legajo).subscribe(() => {
+    if (items.length && legajoCustodia) {
+      this.stockService.quitarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Quitado Con Éxito', 5);
   
         // Generar reporte de baja

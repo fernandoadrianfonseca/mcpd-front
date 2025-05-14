@@ -38,12 +38,12 @@ export class StockService {
     return this.restService.get<ProductosStock[]>('stock/disponible-asignar');
   }
 
-  asignarCustodia(items: { stockId: number; cantidad: number; observaciones?: string }[], legajo: number) {
-    return this.restService.post('stock/asignar-custodia?legajoEmpleado=' + legajo, items);
+  asignarCustodia(items: { stockId: number; cantidad: number; observaciones?: string }[], legajoCustodia: number, legajoCarga: number) {
+    return this.restService.post('stock/asignar-custodia?legajoCustodia=' + legajoCustodia + '&legajoCarga=' + legajoCarga, items);
   }
 
-  quitarCustodia(items: { stockId: number; cantidad: number; observaciones?: string }[], legajo: number) {
-    return this.restService.post('stock/quitar-custodia?legajoEmpleado=' + legajo, items);
+  quitarCustodia(items: { stockId: number; cantidad: number; observaciones?: string }[], legajoCustodia: number, legajoCarga: number) {
+    return this.restService.post('stock/quitar-custodia?legajoCustodia=' + legajoCustodia + '&legajoCarga=' + legajoCarga, items);
   }
 
   transferirCustodia(
