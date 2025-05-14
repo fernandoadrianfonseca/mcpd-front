@@ -222,10 +222,16 @@
             <td mat-cell *matCellDef="let stock"> {{ stock.cantidad }} </td>
           </ng-container>
 
+          <!-- Cantidad Disponible-->
+          <ng-container matColumnDef="cantidadDisponible">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Cantidad Disponible </th>
+            <td mat-cell *matCellDef="let stock"> {{ stock.cantidad - stock.cantidadCustodia}} </td>
+          </ng-container>
+
           <!-- Cantidad Custodia -->
           <ng-container matColumnDef="cantidadCustodia">
             <th mat-header-cell *matHeaderCellDef mat-sort-header> Cantidad Custodia </th>
-            <td mat-cell *matCellDef="let stock"> {{ stock.cantidadCustodia }} </td>
+            <td mat-cell *matCellDef="let stock"> {{ stock.consumible ? '-' : stock.cantidadCustodia }} </td>
           </ng-container>
   
           <!-- Marca -->

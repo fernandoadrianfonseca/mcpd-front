@@ -91,7 +91,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     this.displayedColumns = this.modoCustodia
               ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'detalles', 'numeroDeSerie']
               : this.modoAsignar || this.modoQuitar || this.modoTransferir
-                ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'accionesAgregar']
+                ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadDisponible', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'accionesAgregar']
                 : ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'tipo', 'marca', 'modelo', 'consumible', 'numeroDeSerie', 'detalles', 'custodia', 'acciones'];
 
     this.stockForm = this.fb.group({
@@ -478,6 +478,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
           if (cantidadIngresada > disponible) {
             this.mostrarDialogoOk(
+              stock.consumible ?
+              `La Cantidad Ingresada Supera El Disponible Sin Asignar Igual A ${disponible}.` :
               `La Cantidad Ingresada Supera El Disponible Sin Custodia Igual A ${disponible}.`,
               {
                 icono: 'error_outline',
@@ -746,6 +748,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       parametros.legajoEmpleado = String(legajoSeleccionadoLista);
       parametros.nombreEmpleadoEntrega = nombreLogueado;
       parametros.legajoEmpleadoEntrega = String(legajoLogueado);
+      parametros.nombreEmpleadoRecibe = nombreLogueado;
+      parametros.legajoEmpleadoRecibe = String(legajoLogueado);
       parametros.dependenciaAutoriza = dependenciaSeleccionada;
     }
 
