@@ -23,6 +23,7 @@ import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.compone
 import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-table-dialog.component';
 import { MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { ReporteService } from '../../services/rest/reporte/reporte.service';
+import { UtilsService } from '../../services/utils/utils.service';
 
 interface StockParaOperar {
   stock: ProductosStock;
@@ -77,6 +78,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     private productoService: ProductoService,
     private dialogService: DialogService,
     private dialog: MatDialog,
+    private utils: UtilsService,
     @Inject('menuData') public menuData: any
   ) {}
 
@@ -321,6 +323,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   private crearNuevoStock(stock: ProductosStock): void {
     this.stockService.crearStock(stock).subscribe(() => {
       this.stockService.showSuccessMessage('Stock Guardado Con Éxito', 5);
+      this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Guardado Con Éxito ' + JSON.stringify(stock));
       this.cancelarEdicion();
       this.loadStock();
     });
@@ -329,6 +332,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   private actualizarStock(stock: ProductosStock): void {
     this.stockService.actualizarStock(stock.id!, stock).subscribe(() => {
       this.stockService.showSuccessMessage('Stock Actualizado Con Éxito', 5);
+      this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Actualizado ' + JSON.stringify(stock));
       this.cancelarEdicion();
       this.loadStock();
     });
@@ -561,6 +565,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajoCustodia).subscribe({
         next: () => {
           this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Números de Serie Asignados Correctamente ' + JSON.stringify(numerosDeSerie) + ' ' + legajoCustodia);
         },
         error: (error) => {
           console.error('Error al asignar números de serie:', error);
@@ -572,6 +577,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     if (items.length && legajoCustodia) {
       this.stockService.asignarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
+        this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Asignado Con Éxito ' + JSON.stringify(items) + ' ' + legajoCustodia + ' ' + legajoCarga);
   
         // Separar consumibles y no consumibles
         const consumibles = this.stockParaOperar.filter(i => i.stock.consumible);
@@ -634,11 +640,12 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       console.log('Números de Serie que se van a enviar:', numerosDeSerie);
       this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie).subscribe({
         next: () => {
-          this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
+          this.stockService.showSuccessMessage('Números de Serie Quitados De Custodia Correctamente', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Números de Serie Quitados De Custodia Correctamente ' + JSON.stringify(numerosDeSerie));
         },
         error: (error) => {
           console.error('Error al asignar números de serie:', error);
-          this.stockService.showErrorMessage('Error al asignar los números de serie', 5);
+          this.stockService.showErrorMessage('Error Al Quitar De Custodia Los Números De Serie', 5);
         }
       });
     }
@@ -646,6 +653,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     if (items.length && legajoCustodia) {
       this.stockService.quitarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Quitado Con Éxito', 5);
+        this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Quitado Con Éxito ' + JSON.stringify(items) + ' ' + legajoCustodia + ' ' + legajoCarga);
   
         // Generar reporte de baja
         this.generarReporteAsignacion(this.stockParaOperar, 'acta-baja-patrimonial');
@@ -699,6 +707,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajoDestino).subscribe({
         next: () => {
           this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Números de Serie Asignados Correctamente ' 
+                                              + JSON.stringify(numerosDeSerie) + ' ' + legajoDestino);
         },
         error: (error) => {
           console.error('Error al asignar números de serie:', error);
@@ -710,6 +720,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     if (items.length && legajoOrigen && legajoDestino) {
       this.stockService.transferirCustodia(items, legajoOrigen, legajoDestino, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Transferido Con Éxito', 5);
+        this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Transferido Con Éxito ' 
+                                              + JSON.stringify(items) + ' ' + legajoOrigen + ' ' + legajoDestino);
   
         // Generar reporte de transferencia
         this.generarReporteAsignacion(this.stockParaOperar, 'acta-transferencia-patrimonial');
@@ -808,6 +820,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       if (result) {
         this.stockService.eliminarStock(id).subscribe(() => {
           this.stockService.showSuccessMessage('Stock Eliminado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Eliminado Con Éxito ' + id);
           this.loadStock();
         });
       }
@@ -911,12 +924,16 @@ export class StockFormComponent implements OnInit, AfterViewInit {
               }));
   
               this.stockService.crearNumerosDeSerie(registros).subscribe(() => {
-                this.stockService.showSuccessMessage('Stock y Números de Serie Registrados', 5);
+                this.stockService.showSuccessMessage('Stock Agregado y Números de Serie Registrados', 5);
+                this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Agregado y Números de Serie Registrados ' 
+                                                                + JSON.stringify(flujo) + ' ' + JSON.stringify(numeros));
                 this.loadStock();
               });
   
             } else {
-              this.stockService.showSuccessMessage('Stock Registrado', 5);
+              this.stockService.showSuccessMessage('Stock Agregado', 5);
+              this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Agregado ' 
+                                                                + JSON.stringify(flujo));
               this.loadStock();
             }
           });
@@ -984,6 +1001,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
           this.stockService.crearFlujoDeStock(flujo).subscribe(() => {
             this.stockService.showSuccessMessage('Baja De Stock Registrada Con Éxito', 5);
+            this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Baja De Stock Registrada Con Éxito ' 
+                                                                + JSON.stringify(flujo));
             this.loadStock();
           });
         });

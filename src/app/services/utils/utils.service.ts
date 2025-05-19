@@ -1,9 +1,13 @@
 import { Injectable } from '@angular/core';
+import { Log } from '../../models/log.model';
+import { LogService } from '../rest/log/log.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class UtilsService {
+  
+  constructor(private logService: LogService){}
 
   /** Formatea una fecha tipo `Date` a 'dd/MM/yyyy' */
   formatDateToDDMMYYYY(date: Date): string {
@@ -38,5 +42,10 @@ export class UtilsService {
 
   getEpochTimeMinutes(): number {
     return Math.floor(Date.now() / 1000 / 60);
+  }
+
+  guardarLog(operador: string, movimiento: string) {
+    const nuevoLog = new Log({ operador: operador, movimiento: movimiento });
+    this.logService.guardar(nuevoLog).subscribe(() => { });
   }
 }
