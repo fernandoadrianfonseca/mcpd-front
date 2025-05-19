@@ -22,6 +22,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.component';
 import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-table-dialog.component';
 import { MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { ReporteService } from '../../services/rest/reporte/reporte.service';
 
 interface StockParaOperar {
   stock: ProductosStock;
@@ -70,6 +71,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   constructor(
     private fb: FormBuilder,
     private stockService: StockService,
+    private reporteService: ReporteService,
     private empleadoService: EmpleadoService,
     private categoriaService: CategoriaService,
     private productoService: ProductoService,
@@ -724,6 +726,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string): void {
 
     let cantidadCopias=1;
+    const generaReporteLegajo = this.menuData?.empleadoLogueado?.legajo;
+    const generaReporteNombre = this.menuData?.empleadoLogueado?.nombre;
     const legajoSeleccionadoLista = this.menuData?.empleado?.legajo;
     const nombreSeleccionadoLista = this.menuData?.empleado?.nombre;
     const legajoLogueado = this.menuData?.empleadoLogueado?.legajo;
@@ -768,12 +772,14 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
     const requestDto = {
       nombreReporte,
+      generaReporteLegajo,
+      generaReporteNombre,
       cantidadCopias,
       parametros,
       datos
     };
   
-    this.stockService.generarReporteConLista(requestDto).subscribe(blob => {
+    this.reporteService.generarReporteConLista(requestDto).subscribe(blob => {
       const url = window.URL.createObjectURL(blob);
       window.open(url);
     });

@@ -62,10 +62,6 @@ export class StockService {
   showErrorMessage(message: string, duration: number){
     this.restService.showMessage(message, 'error', duration*1000, 'top', false);
   }
-
-  generarReporteConLista(requestDto: any): Observable<Blob> {
-    return this.restService.post<Blob>('reportes/pdf', requestDto, { responseType: 'blob' });
-  }
   
   getNumerosDeSeriePorStock(id: number, options?: { activo?: boolean, empleadoCustodia?: number }): Observable<any[]> {
     let params = new HttpParams();
