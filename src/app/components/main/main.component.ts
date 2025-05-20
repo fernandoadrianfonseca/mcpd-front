@@ -62,8 +62,8 @@ export class MainComponent implements OnInit, OnDestroy {
         position: 70,
         dependenciasPermitidas: ['Informatica'],
         subItems: [
-          { label: 'Categorías', icon: 'view_list', component: CategoriaFormComponent, data:null },
-          { label: 'Productos', icon: 'category', component: ProductoFormComponent, data:null },
+          { label: 'Categorías', icon: 'view_list', component: CategoriaFormComponent, data: {empleadoLogueado: this.usuario} },
+          { label: 'Productos', icon: 'category', component: ProductoFormComponent, data: {empleadoLogueado: this.usuario} },
           { label: 'Stock', icon: 'inventory', component: StockFormComponent, data: {empleadoLogueado: this.usuario} },
           { label: 'Custodia', icon: 'supervisor_account', component: EmpleadoFormComponent, data: { modoCustodia: true, empleadoLogueado: this.usuario } }
         ],
@@ -74,8 +74,8 @@ export class MainComponent implements OnInit, OnDestroy {
         position: 130,
         dependenciasPermitidas: ['Informatica'],
         subItems: [
-          { label: 'Empleados', icon: 'badge', component: EmpleadoFormComponent, data:null }, 
-          { label: 'Contribuyente', icon: 'account_balance', component: ContribuyenteFormComponent as any, data:null }
+          { label: 'Empleados', icon: 'badge', component: EmpleadoFormComponent, data: {empleadoLogueado: this.usuario} }, 
+          { label: 'Contribuyente', icon: 'account_balance', component: ContribuyenteFormComponent as any, data: {empleadoLogueado: this.usuario} }
         ],
       },
       {

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Contribuyente } from '../../models/contribuyente.model';
 import { ContribuyenteService } from '../../services/rest/contribuyente/contribuyente.service';
@@ -8,6 +8,7 @@ import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort } from '@angular/material/sort';
 import { DialogService } from '../../services/dialog/dialog.service';
+import { UtilsService } from '../../services/utils/utils.service';
 
 @Component({
   selector: 'app-contribuyente-form',
@@ -27,7 +28,9 @@ export class ContribuyenteFormComponent implements OnInit {
 
   constructor(private fb: FormBuilder,
                 private contribuyenteService: ContribuyenteService,
-                  private dialogService: DialogService) {}
+                  private dialogService: DialogService,
+                   private utils: UtilsService,
+                    @Inject('menuData') public menuData: any) {}
 
   ngOnInit(): void {
     this.contribuyenteForm = this.fb.group({
@@ -91,12 +94,14 @@ export class ContribuyenteFormComponent implements OnInit {
         // ✅ Usa el `cuit` para actualizar correctamente
         this.contribuyenteService.actualizarContribuyente(contribuyente.cuit, contribuyente).subscribe(() => {
           this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + contribuyente.cuit + ' Actualizado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Contribuyente CUIT ' + contribuyente.cuit + ' Actualizado');
           this.loadContribuyentes();
           this.cancelarEdicion();
         });
       } else {
         this.contribuyenteService.crearContribuyente(contribuyente).subscribe(() => {
           this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + contribuyente.cuit + ' Agregado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Contribuyente CUIT ' + contribuyente.cuit + ' Agregado');
           this.loadContribuyentes();
           this.cancelarEdicion();
         });
@@ -128,11 +133,12 @@ export class ContribuyenteFormComponent implements OnInit {
     this.contribuyenteForm.get('cuit')?.enable();
   }
 
-  eliminarContribuyente(cuit: number): void {
-    this.dialogService.confirm('¿Seguro Que Quieres Eliminar El Contribuyente CUIT ' + cuit + '?').subscribe(result => {
+  eliminarContribuyente(contribuyente: Contribuyente): void {
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar El Contribuyente CUIT ' + contribuyente.cuit + '?').subscribe(result => {
       if (result) {
-        this.contribuyenteService.eliminarContribuyente(cuit).subscribe(() => {
-          this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + cuit + ' Eliminado Con Éxito', 5);
+        this.contribuyenteService.eliminarContribuyente(contribuyente.cuit).subscribe(() => {
+          this.contribuyenteService.showSuccessMessage('Contribuyente CUIT ' + contribuyente.cuit + ' Eliminado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Contribuyente CUIT ' + JSON.stringify(contribuyente) + ' Eliminado Con Éxito');
           this.loadContribuyentes();
         });
       }

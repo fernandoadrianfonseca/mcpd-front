@@ -12,6 +12,7 @@ import { ContribuyenteService } from '../../services/rest/contribuyente/contribu
 import { Contribuyente } from '../../models/contribuyente.model';
 import { DialogService } from '../../services/dialog/dialog.service';
 import { StockFormComponent } from '../stock-form/stock-form.component';
+import { UtilsService } from '../../services/utils/utils.service';
 
 @Component({
   selector: 'app-empleado-form',
@@ -43,7 +44,8 @@ export class EmpleadoFormComponent implements OnInit {
                private empleadoService: EmpleadoService,
                 private contribuyenteService: ContribuyenteService,
                   private dialogService: DialogService,
-                      @Inject('menuData') public menuData: any) {}
+                   private utils: UtilsService,
+                     @Inject('menuData') public menuData: any) {}
 
   ngOnInit(): void {
     this.modoCustodia = this.menuData?.modoCustodia || false;
@@ -134,12 +136,14 @@ export class EmpleadoFormComponent implements OnInit {
       if (this.editando) {
         this.empleadoService.actualizarEmpleado(empleado.legajo, empleado).subscribe(() => {
           this.empleadoService.showSuccessMessage('Empleado Legajo ' + empleado.legajo +' Actualizado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Empleado Legajo ' + empleado.legajo +' Actualizado');
           this.loadEmpleados();
           this.cancelarEdicion();
         });
       } else {
         this.empleadoService.crearEmpleado(empleado).subscribe(() => {
           this.empleadoService.showSuccessMessage('Empleado Legajo ' + empleado.legajo + ' Agregado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Empleado Legajo ' + empleado.legajo + ' Agregado');
           this.loadEmpleados();
           this.cancelarEdicion();
         });
@@ -161,12 +165,12 @@ export class EmpleadoFormComponent implements OnInit {
     this.empleadoForm.get('cuil')?.enable();
   }
 
-  eliminarEmpleado(legajo: number): void {
-
-    this.dialogService.confirm('¿Seguro Que Quieres Eliminar El Empleado Legajo ' + legajo + '?').subscribe(result => {
+  eliminarEmpleado(empleado: Empleado): void {
+    this.dialogService.confirm('¿Seguro Que Quieres Eliminar El Empleado Legajo ' + empleado.legajo + '?').subscribe(result => {
       if (result) {
-        this.empleadoService.eliminarEmpleado(legajo).subscribe(() => {
-          this.empleadoService.showSuccessMessage('Empleado Legajo ' + legajo + ' Eliminado Con Éxito', 5);
+        this.empleadoService.eliminarEmpleado(empleado.legajo).subscribe(() => {
+          this.empleadoService.showSuccessMessage('Empleado Legajo ' + empleado.legajo + ' Eliminado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Empleado ' + JSON.stringify(empleado) + ' Eliminado');
           this.loadEmpleados();
         });
       }
@@ -179,6 +183,7 @@ export class EmpleadoFormComponent implements OnInit {
         if (result) {
           this.empleadoService.blanquearPassword(empleado.legajo).subscribe(() => {
             this.empleadoService.showSuccessMessage(`Password Del Empleado Legajo ${empleado.legajo} Blanqueado Con Éxito`, 5);
+            this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Password Del Empleado ' + JSON.stringify(empleado) + ' Blanqueado');
           });
         }
       });

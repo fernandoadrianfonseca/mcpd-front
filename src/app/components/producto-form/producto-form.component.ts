@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Producto } from '../../models/producto.model';
 import { ProductoService } from '../../services/rest/producto/producto.service';
@@ -9,6 +9,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
 import { DialogService } from '../../services/dialog/dialog.service';
+import { UtilsService } from '../../services/utils/utils.service';
 
 @Component({
   selector: 'producto-form',
@@ -31,7 +32,9 @@ export class ProductoFormComponent implements OnInit {
   constructor(private fb: FormBuilder,
                 private productoService: ProductoService,
                   private categoriaService: CategoriaService,
-                    private dialogService: DialogService) {}
+                    private dialogService: DialogService,
+                      private utils: UtilsService,
+                        @Inject('menuData') public menuData: any) {}
 
   ngOnInit(): void {
     this.productoForm = this.fb.group({
@@ -67,6 +70,7 @@ export class ProductoFormComponent implements OnInit {
         // ✅ Si se está editando, actualiza el producto
         this.productoService.actualizarProducto(producto.id!, producto).subscribe(() => {
           this.productoService.showSuccessMessage('Producto Actualizado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Producto Actualizado ' + JSON.stringify(producto));
           this.cancelarEdicion(); // Reinicia el formulario
           this.loadProductos();
         });
@@ -74,6 +78,7 @@ export class ProductoFormComponent implements OnInit {
         // ✅ Si no, crea un nuevo producto
         this.productoService.crearProducto(producto).subscribe(() => {
           this.productoService.showSuccessMessage('Producto Guardado Con Éxito',5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Producto Guardado ' + JSON.stringify(producto));
           this.cancelarEdicion(); // Reinicia el formulario
           this.loadProductos();
         });
@@ -97,11 +102,12 @@ export class ProductoFormComponent implements OnInit {
   }
 
   /** ✅ Método para eliminar un producto */
-  eliminarProducto(id: number): void {
+  eliminarProducto(producto: Producto): void {
     this.dialogService.confirm('¿Seguro Que Quieres Eliminar Este Producto?').subscribe(result => {
       if (result) {
-        this.productoService.eliminarProducto(id).subscribe(() => {
+        this.productoService.eliminarProducto(producto.id ?? 0).subscribe(() => {
           this.productoService.showSuccessMessage('Producto Eliminado Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Producto Eliminado ' + JSON.stringify(producto));
           this.loadProductos();
         });
       }

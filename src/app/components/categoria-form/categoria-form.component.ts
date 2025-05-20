@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Categoria } from '../../models/categoria.model';
 import { CategoriaService } from '../../services/rest/categoria/categoria.service';
@@ -8,6 +8,7 @@ import { MatPaginator } from '@angular/material/paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatSort } from '@angular/material/sort';
 import { DialogService } from '../../services/dialog/dialog.service';
+import { UtilsService } from '../../services/utils/utils.service';
 
 @Component({
   selector: 'categoria-form',
@@ -28,7 +29,9 @@ export class CategoriaFormComponent implements OnInit {
 
   constructor(private fb: FormBuilder,
                private categoriaService: CategoriaService,
-                private dialogService: DialogService) {}
+                private dialogService: DialogService,
+                 private utils: UtilsService,
+                  @Inject('menuData') public menuData: any) {}
 
   ngOnInit(): void {
     this.categoriaForm = this.fb.group({
@@ -52,12 +55,14 @@ export class CategoriaFormComponent implements OnInit {
       if (this.categoriaEditando) {
         this.categoriaService.actualizarCategoria(categoria.id!, categoria).subscribe(() => {
           this.categoriaService.showSuccessMessage('Categoría Actualizada Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Categoria Actualizada ' + JSON.stringify(categoria));
           this.cancelarEdicion();
           this.loadCategorias();
         });
       } else {
         this.categoriaService.crearCategoria(categoria).subscribe(() => {
           this.categoriaService.showSuccessMessage('Categoría Guardada Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Categoria Guardada ' + JSON.stringify(categoria));
           this.cancelarEdicion();
           this.loadCategorias();
         });
@@ -77,11 +82,12 @@ export class CategoriaFormComponent implements OnInit {
     this.categoriaForm.reset();
   }
 
-  eliminarCategoria(id: number): void {
+  eliminarCategoria(categoria: Categoria): void {
     this.dialogService.confirm('¿Seguro Que Quieres Eliminar Esta Categoría?').subscribe(result => {
       if (result) {
-        this.categoriaService.eliminarCategoria(id).subscribe(() => {
+        this.categoriaService.eliminarCategoria(categoria.id ?? 0).subscribe(() => {
           this.categoriaService.showSuccessMessage('Categoría Eliminada Con Éxito', 5);
+          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Categoria Eliminada ' + JSON.stringify(categoria));
           this.loadCategorias();
         });
       }
