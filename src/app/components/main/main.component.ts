@@ -62,11 +62,35 @@ export class MainComponent implements OnInit, OnDestroy {
         position: 70,
         dependenciasPermitidas: ['Informatica'],
         subItems: [
-          { label: 'Categorías', icon: 'view_list', component: CategoriaFormComponent, data: {empleadoLogueado: this.usuario} },
-          { label: 'Productos', icon: 'category', component: ProductoFormComponent, data: {empleadoLogueado: this.usuario} },
-          { label: 'Stock', icon: 'inventory', component: StockFormComponent, data: {empleadoLogueado: this.usuario} },
-          { label: 'Custodia', icon: 'supervisor_account', component: EmpleadoFormComponent, data: { modoCustodia: true, empleadoLogueado: this.usuario } }
-        ],
+          {
+            label: 'Categorías',
+            icon: 'view_list',
+            ruta: 'categoria',
+            component: CategoriaFormComponent,
+            data: { empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Productos',
+            icon: 'category',
+            ruta: 'producto',
+            component: ProductoFormComponent,
+            data: { empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Stock',
+            icon: 'inventory',
+            ruta: 'stock',
+            component: StockFormComponent,
+            data: { empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Custodia',
+            icon: 'supervisor_account',
+            ruta: 'empleado',
+            component: EmpleadoFormComponent,
+            data: { modoCustodia: true, empleadoLogueado: this.usuario }
+          }
+        ]
       },
       {
         label: 'RRHH',
@@ -74,16 +98,29 @@ export class MainComponent implements OnInit, OnDestroy {
         position: 130,
         dependenciasPermitidas: ['Informatica'],
         subItems: [
-          { label: 'Empleados', icon: 'badge', component: EmpleadoFormComponent, data: {empleadoLogueado: this.usuario} }, 
-          { label: 'Contribuyente', icon: 'account_balance', component: ContribuyenteFormComponent as any, data: {empleadoLogueado: this.usuario} }
-        ],
+          {
+            label: 'Empleados',
+            icon: 'badge',
+            ruta: 'empleado',
+            component: EmpleadoFormComponent,
+            data: { empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Contribuyente',
+            icon: 'account_balance',
+            ruta: 'contribuyente',
+            component: ContribuyenteFormComponent as any,
+            data: { empleadoLogueado: this.usuario }
+          }
+        ]
       },
       {
         label: 'Proveedores',
         icon: 'local_shipping',
         position: 10,
+        ruta: 'proveedor',
         component: ProveedorFormComponent,
-        data:null,
+        data: null,
         dependenciasPermitidas: ['Informatica']
       }
     ];
@@ -152,27 +189,33 @@ export class MainComponent implements OnInit, OnDestroy {
   }
 
   selectComponent(component: any, data?: any): void {
-    this.selectedComponent = component;
-    this.selectedComponentData = data || {};
-    this.customInjector = null; // reset cache para que el próximo render tenga el nuevo injector
-    const label = component.name?.toLowerCase().replace(/component|form|_/g, '') || 'componente';
-  
-    // ✅ Manejo de URL con query params
-    let url = `/main/${label}`;
-    if (data) {
-      const params = [];
-      if (data.modoAsignar) params.push('modo=asignar');
-      if (data.modoTransferir) params.push('modo=transferir');
-      if (data.modoQuitar) params.push('modo=quitar');
-      if (data.modoCustodia) params.push('modo=custodia');
-      if (params.length > 0) {
-        url += '?' + params.join('&');
+      this.selectedComponent = component;
+      this.selectedComponentData = data || {};
+      this.customInjector = null;
+
+      const found = this.menuItems
+        .flatMap(item => item.subItems || [item])
+        .find(i => i.component === component);
+
+      let url = '/main';
+      if (found?.ruta) {
+        url += '/' + found.ruta;
       }
+
+      if (data) {
+        const params = [];
+        if (data.modoAsignar) params.push('modo=asignar');
+        if (data.modoTransferir) params.push('modo=transferir');
+        if (data.modoQuitar) params.push('modo=quitar');
+        if (data.modoCustodia) params.push('modo=custodia');
+        if (params.length > 0) {
+          url += '?' + params.join('&');
+        }
+      }
+
+      this.navigationHistory.push({ component, data, url });
+      history.pushState({}, '', url);
     }
-    
-    this.navigationHistory.push({ component, data, url });
-    history.pushState({}, '', url);
-  }
 
   logout(): void {
     this.authService.logout();
