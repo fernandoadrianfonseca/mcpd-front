@@ -81,6 +81,14 @@ export class StockService {
     return this.restService.get<any[]>(`numeros-de-serie/producto-stock/${id}/sin-custodia`);
   }
 
+  crearNumerosDeSerie(numeros: any[]): Observable<any> {
+    return this.restService.post('numeros-de-serie/lote', numeros);
+  }
+
+  darDeBajaNumerosDeSerie(ids: number[]): Observable<any> {
+    return this.restService.put('numeros-de-serie/darDeBaja', ids);
+  }
+
   asignarCustodiaNumerosDeSerie(ids: number[], legajo?: number): Observable<any> {
     const url = legajo != null
       ? `numeros-de-serie/asignar-custodia?legajo=${legajo}`
@@ -93,10 +101,6 @@ export class StockService {
     return this.restService.post('stock-flujo', flujo);
   }
   
-  crearNumerosDeSerie(numeros: any[]): Observable<any> {
-    return this.restService.post('numeros-de-serie/lote', numeros);
-  }
-
   getCustodiasActivasPorStock(productoStockId: number): Observable<any[]> {
     return this.restService.get<any[]>(`stock-flujo/producto-stock/${productoStockId}/custodias-activas`);
   }

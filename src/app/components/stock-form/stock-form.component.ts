@@ -940,22 +940,24 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   abrirModalBajaStock(stock: ProductosStock): void {
-    const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
-      width: '820px',
-      data: {
-        title: `Dar De Baja Stock: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
-        fields: [
-          { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
-          { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
-          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
-        ]
-      }
-    });
-  
-    dialogRef.afterClosed().subscribe(result => {
+  const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
+    width: '820px',
+    data: {
+      title: `Dar De Baja Stock: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+      fields: [
+        { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
+        { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
+        { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+        { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
+      ]
+    }
+  });
+
+  dialogRef.afterClosed().subscribe(result => {
+
       if (result) {
         const cantidadBaja = +result.cantidad;
-  
+
         if (cantidadBaja <= 0) {
           this.mostrarDialogoOk('La Cantidad Debe Ser Mayor A Cero.', {
             icono: 'error_outline',
@@ -964,9 +966,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           });
           return;
         }
-  
+
         const nuevoTotal = stock.cantidad - cantidadBaja;
-  
+
         if (nuevoTotal < 0) {
           this.mostrarDialogoOk('La Cantidad A Dar De Baja Supera El Stock Actual.', {
             icono: 'error_outline',
@@ -975,15 +977,28 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           });
           return;
         }
-  
+
+        const numerosSeleccionados: number[] = result.numeroDeSerie instanceof Array
+          ? result.numeroDeSerie.map((n: any) => n.value)
+          : [];
+
+        if (numerosSeleccionados.length > cantidadBaja) {
+          this.mostrarDialogoOk('La Cantidad De Números De Serie Seleccionados Supera La Cantidad A Dar De Baja.', {
+            icono: 'error_outline',
+            colorIcono: '#d32f2f',
+            titulo: '¡Error De Validación!'
+          });
+          return;
+        }
+
         const empleado = this.menuData?.empleadoLogueado;
         const legajo = empleado?.legajo;
-  
+
         const stockActualizado: ProductosStock = {
           ...stock,
           cantidad: nuevoTotal
         };
-  
+
         this.stockService.actualizarStock(stock.id!, stockActualizado).subscribe(() => {
           const flujo = {
             productoStock: { id: stock.id },
@@ -995,11 +1010,21 @@ export class StockFormComponent implements OnInit, AfterViewInit {
             motivoBaja: result.motivoBaja?.trim(),
             observaciones: result.observaciones?.trim() || null
           };
-  
+
           this.stockService.crearFlujoDeStock(flujo).subscribe(() => {
-            this.stockService.showSuccessMessage('Baja De Stock Registrada Con Éxito', 5);
-            this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Baja De Stock Registrada ' + JSON.stringify(flujo));
-            this.loadStock();
+
+            if (numerosSeleccionados.length > 0) {
+              this.stockService.darDeBajaNumerosDeSerie(numerosSeleccionados).subscribe(() => {
+                this.stockService.showSuccessMessage('Baja De Stock y Números De Serie Dados De Baja', 5);
+                this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Baja De Stock y Números De Serie Dados De Baja ' 
+                                                                                      + JSON.stringify(flujo) + ' ' + JSON.stringify(numerosSeleccionados));
+                this.loadStock();
+              });
+            } else {
+              this.stockService.showSuccessMessage('Baja De Stock Registrada Con Éxito', 5);
+              this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Baja De Stock Registrada ' + JSON.stringify(flujo));
+              this.loadStock();
+            }
           });
         });
       }
