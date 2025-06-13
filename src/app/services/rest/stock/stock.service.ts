@@ -114,4 +114,8 @@ export class StockService {
   
     return this.restService.get<any[]>(`stock-flujo/producto-stock/${stockId}/flujos-altas-bajas`, { params });
   }
+
+  getPrestamosPendientesDeDevolucion(legajo: number): Observable<any[]> {
+    return this.restService.get<any[]>(`stock-flujo/pendientes-devolucion?legajo=${legajo}`);
+  }
 }

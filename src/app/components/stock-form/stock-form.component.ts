@@ -21,7 +21,9 @@ import { Empleado } from '../../models/empleado.model';
 import { MatDialog } from '@angular/material/dialog';
 import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.component';
 import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-table-dialog.component';
-import { MatAutocompleteSelectedEvent, MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
+import { MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
+import { MomentDateAdapter } from '@angular/material-moment-adapter';
 import { ReporteService } from '../../services/rest/reporte/reporte.service';
 import { UtilsService } from '../../services/utils/utils.service';
 
@@ -32,11 +34,28 @@ interface StockParaOperar {
   numerosDeSerie?: [];
 }
 
+export const MY_DATE_FORMATS = {
+  parse: {
+    dateInput: 'DD/MM/YYYY',
+  },
+  display: {
+    dateInput: 'DD/MM/YYYY',
+    monthYearLabel: 'MMMM YYYY',
+    dateA11yLabel: 'DD/MM/YYYY',
+    monthYearA11yLabel: 'MMMM YYYY',
+  },
+};
+
 @Component({
   selector: 'stock-form',
   templateUrl: './stock-form.component.html',
   styleUrls: ['./stock-form.component.scss'],
-  imports: [CommonModule, MaterialModule, ReactiveFormsModule, FormsModule]
+  imports: [CommonModule, MaterialModule, ReactiveFormsModule, FormsModule],
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'es-AR' },
+    { provide: DateAdapter, useClass: MomentDateAdapter, deps: [MAT_DATE_LOCALE] },
+    { provide: MAT_DATE_FORMATS, useValue: MY_DATE_FORMATS }
+  ]
 })
 export class StockFormComponent implements OnInit, AfterViewInit {
   stockForm!: FormGroup;
@@ -63,6 +82,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   empleadoSeleccionado: any = null;
   empleadosFiltrados: Observable<any[]> = of([]);
   dependenciaControl = new FormControl();
+  fechaDevolucionControl = new FormControl(null);
+  fechaMinimaDevolucion = new Date();
   dependencias: string[] = ['PATRIMONIO','RENTAS','DESPACHO','GOBIERNO','CATASTRO','ARCHIVO','HACIENDA','CONTADURIA','RRHH','BROMATOLOGIA','INFORMATICA',
                             'PEDIDOS','RECAUDACION','OBRAS','LIQUIDACION','TESORERIA','COMPRAS'];
 
@@ -84,6 +105,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
 
+    this.fechaMinimaDevolucion.setDate(this.fechaMinimaDevolucion.getDate() + 1);
     this.modoCustodia = this.menuData?.modoCustodia || false;
     this.legajoLogueado = this.menuData?.empleadoLogueado?.legajo || null;
     this.legajoCustodia = this.menuData?.empleado?.legajo || null;
@@ -91,12 +113,12 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     this.modoQuitar = this.menuData?.modoQuitar || false;
     this.modoTransferir = this.menuData?.modoTransferir || false;
 
-    this.displayedColumnsAsignacion = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'consumible', 'observaciones', 'accionesAsignar'];
+    this.displayedColumnsAsignacion = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'consumible', 'conDevolucion', 'observaciones', 'accionesAsignar'];
     this.displayedColumns = this.modoCustodia
-              ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'detalles', 'numeroDeSerie']
+              ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'detalles', 'numeroDeSerie']
               : this.modoAsignar || this.modoQuitar || this.modoTransferir
-                ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadDisponible', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'accionesAgregar']
-                : ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'tipo', 'marca', 'modelo', 'consumible', 'numeroDeSerie', 'detalles', 'custodia', 'acciones'];
+                ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadDisponible', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'accionesAgregar']
+                : ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'numeroDeSerie', 'detalles', 'custodia', 'acciones'];
 
     this.stockForm = this.fb.group({
       categoria: ['', Validators.required],
@@ -106,6 +128,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       detalle: [''],
       tipo: ['', Validators.required],
       consumible: ['false', Validators.required],
+      conDevolucion: ['false', Validators.required]
     });
 
     this.categoriaService.getCategorias().subscribe(data => {
@@ -119,9 +142,29 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     // ✅ Listener para detectar cambios en "tipo" de stock
     this.stockForm.get('tipo')?.valueChanges.subscribe((value: string) => {
       if (value === 'Insumos') {
-        this.stockForm.get('consumible')?.setValue('true');
+        this.stockForm.get('consumible')?.setValue('true', { emitEvent: true }); // este sí debe emitir
       } else if (value === 'Dotacion Fija') {
-        this.stockForm.get('consumible')?.setValue('false');
+        this.stockForm.get('consumible')?.setValue('false', { emitEvent: true }); // idem
+      }
+    });
+
+    this.stockForm.get('consumible')?.valueChanges.subscribe(valor => {
+      const conDevCtrl = this.stockForm.get('conDevolucion');
+      if (valor === 'true') {
+        conDevCtrl?.setValue('false', { emitEvent: false });
+        conDevCtrl?.disable({ emitEvent: false });
+      } else {
+        conDevCtrl?.enable({ emitEvent: false });
+      }
+    });
+
+    this.stockForm.get('conDevolucion')?.valueChanges.subscribe(valor => {
+      const consCtrl = this.stockForm.get('consumible');
+      if (valor === 'true') {
+        consCtrl?.setValue('false', { emitEvent: false });
+        consCtrl?.disable({ emitEvent: false });
+      } else {
+        consCtrl?.enable({ emitEvent: false });
       }
     });
 
@@ -141,6 +184,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   ngAfterViewInit(): void {
     this.dataSource.paginator = this.paginator;
     this.onTipoCustodiaChange();
+  }
+
+  tieneConDevolucion(): boolean {
+    return this.stockParaOperar.some(item => item.stock.conDevolucion);
   }
 
   tieneConsumible(): boolean {
@@ -258,7 +305,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       marca: this.stockForm.value.marca,
       modelo: this.stockForm.value.modelo,
       detalle: this.stockForm.value.detalle,
-      consumible: this.stockForm.value.consumible === 'true'
+      consumible: this.stockForm.value.consumible === 'true',
+      conDevolucion: this.stockForm.value.conDevolucion === 'true'
     };
   }
 
@@ -393,7 +441,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       marca: stock.marca,
       modelo: stock.modelo,
       detalle: stock.detalle,
-      consumible: stock.consumible ? 'true' : 'false'
+      consumible: stock.consumible ? 'true' : 'false',
+      conDevolucion: stock.conDevolucion ? 'true' : 'false'
     });
   
     // ✅ **Actualizar `mat-autocomplete` correctamente**
@@ -548,11 +597,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     const legajoCustodia = this.menuData?.empleado?.legajo;
     const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
+    const fechaDevolucion = this.fechaDevolucionControl.value || null;
   
     const items = this.stockParaOperar.map(stock => ({
       stockId: stock.stock.id!,
       cantidad: stock.cantidad,
-      observaciones: stock.observaciones ?? undefined
+      observaciones: stock.observaciones ?? undefined,
+      fechaDevolucion: fechaDevolucion
     }));
 
     const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
@@ -582,6 +633,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         // Separar consumibles y no consumibles
         const consumibles = this.stockParaOperar.filter(i => i.stock.consumible);
         const noConsumibles = this.stockParaOperar.filter(i => !i.stock.consumible);
+
+        // Dividir los no consumibles con y sin devolución
+        const conFecha = noConsumibles.filter(i => i.stock.conDevolucion);
+        const sinFecha = noConsumibles.filter(i => !i.stock.conDevolucion);
   
         // Generar reporte de consumibles
         if (consumibles.length) {
@@ -589,8 +644,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         }
   
         // Generar reporte de no consumibles
-        if (noConsumibles.length) {
-          this.generarReporteAsignacion(noConsumibles, 'acta-alta-patrimonial');
+        if (sinFecha.length) {
+          this.generarReporteAsignacion(sinFecha, 'acta-alta-patrimonial');
+        }
+
+        // Generar reporte no consumible con devolución
+        if (conFecha.length) {
+          this.generarReporteAsignacion(conFecha, 'acta-alta-patrimonial-confecha', fechaDevolucion);
         }
   
         // Limpiar selección y recargar stock
@@ -733,7 +793,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }
   }
 
-  generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string): void {
+  generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string, fechaDevolucion?: Date | null): void {
 
     let cantidadCopias=1;
     const generaReporteLegajo = this.menuData?.empleadoLogueado?.legajo;
@@ -757,7 +817,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     // Si el reporte es de entrega, agregamos los parámetros de entrega
     if (nombreReporte === 'acta-alta-patrimonial' 
               || nombreReporte === 'acta-entrega-patrimonial' 
-                    || nombreReporte === 'acta-baja-patrimonial') {
+                    || nombreReporte === 'acta-baja-patrimonial'
+                        || nombreReporte === 'acta-alta-patrimonial-confecha') {
       parametros.nombreEmpleado = nombreSeleccionadoLista;
       parametros.legajoEmpleado = String(legajoSeleccionadoLista);
       parametros.nombreEmpleadoEntrega = nombreLogueado;
@@ -778,6 +839,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       parametros.nombreEmpleado = nombreLogueado;
       parametros.nombreEmpleadoEntrega = nombreSeleccionadoLista;
       parametros.nombreEmpleadoRecibe = this.empleadoSeleccionado.nombre;
+    }
+
+    if (nombreReporte === 'acta-alta-patrimonial-confecha') {
+      parametros.fechaDevolucion = fechaDevolucion;
     }
   
     const requestDto = {

@@ -17,6 +17,7 @@ export class ProductosStock {
   updated?: string;
   tipo!: string;
   consumible!: boolean;
+  conDevolucion?: boolean;
 
   constructor(init?: Partial<ProductosStock>) {
     Object.assign(this, init);

@@ -63,6 +63,15 @@
               </mat-select>
             </mat-form-field>
 
+            <!-- ¿Con Devolución? -->
+            <mat-form-field appearance="outline">
+              <mat-label>¿Con Devolución?</mat-label>
+              <mat-select formControlName="conDevolucion">
+                <mat-option [value]="'false'">No</mat-option>
+                <mat-option [value]="'true'">Sí</mat-option>
+              </mat-select>
+            </mat-form-field>
+
           </div>
         </mat-card-content>
   
@@ -105,8 +114,19 @@
           </ng-container>
 
           <ng-container matColumnDef="consumible">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Consumible </th>
-            <td mat-cell *matCellDef="let stock"> {{ stock.stock.consumible ? 'Sí' : 'No' }} </td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header matTooltip="Consumible">C</th>
+            <td mat-cell *matCellDef="let stock">
+              <mat-icon color="primary" *ngIf="stock.stock.consumible">check_circle</mat-icon>
+              <mat-icon color="warn" *ngIf="!stock.stock.consumible">cancel</mat-icon>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="conDevolucion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header matTooltip="Con Devolución">D</th>
+            <td mat-cell *matCellDef="let stock">
+              <mat-icon color="primary" *ngIf="stock.stock.conDevolucion">check_circle</mat-icon>
+              <mat-icon color="warn" *ngIf="!stock.stock.conDevolucion">cancel</mat-icon>
+            </td>
           </ng-container>
 
           <ng-container matColumnDef="observaciones">
@@ -138,6 +158,21 @@
           </mat-select>
         </mat-form-field>
 
+        <!-- Fecha de Devolución si hay stock con conDevolucion -->
+        <mat-card-title *ngIf="modoAsignar && tieneConDevolucion()">Fecha de Devolución</mat-card-title>
+        <mat-form-field *ngIf="modoAsignar && tieneConDevolucion()" appearance="outline">
+          <mat-label>Seleccionar Fecha de Devolución</mat-label>
+          <input matInput 
+                 [matDatepicker]="picker" 
+                 [formControl]="fechaDevolucionControl" 
+                 [min]="fechaMinimaDevolucion"
+                 (click)="picker.open()"
+                 readonly>
+          <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          <mat-error *ngIf="fechaDevolucionControl.invalid">Campo obligatorio</mat-error>
+        </mat-form-field>
+
         <mat-card-title *ngIf="modoTransferir">Empleado A Transferir</mat-card-title>
         <mat-form-field *ngIf="modoTransferir" (click)="abrirAutocomplete()" appearance="outline" class="empleado-selector">
           <mat-label>Seleccionar Empleado A Transferir</mat-label>
@@ -153,7 +188,9 @@
     
         <div class="botones">
           <button mat-raised-button color="primary" *ngIf="modoAsignar" 
-                                                    [disabled]="stockParaOperar.length === 0 || (!dependenciaControl.value && tieneConsumible())"
+                                                    [disabled]="stockParaOperar.length === 0 ||
+                                                    (!dependenciaControl.value && tieneConsumible())|| 
+                                                    (tieneConDevolucion() && !fechaDevolucionControl.value)"
                                                     (click)="confirmarAsignacion()">Asignar</button>
           <button mat-raised-button color="primary" *ngIf="modoQuitar" [disabled]="stockParaOperar.length === 0" (click)="confirmarQuitarCustodia()">Quitar</button>
           <button mat-raised-button color="primary" *ngIf="modoTransferir" 
@@ -206,7 +243,7 @@
   
           <!-- Producto -->
           <ng-container matColumnDef="productoNombre">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Producto </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Producto&nbsp; </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.productoNombre }} </td>
           </ng-container>
 
@@ -218,8 +255,14 @@
 
           <!-- Cantidad -->
           <ng-container matColumnDef="cantidad">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Cantidad </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Cantidad&nbsp;&nbsp; </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.cantidad }} </td>
+          </ng-container>
+
+          <!-- Tipo -->
+          <ng-container matColumnDef="tipo">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Tipo </th>
+            <td mat-cell *matCellDef="let stock"> {{ stock.tipo }} </td>
           </ng-container>
 
           <!-- Cantidad Disponible-->
@@ -236,24 +279,35 @@
   
           <!-- Marca -->
           <ng-container matColumnDef="marca">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Marca </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Marca&nbsp;&nbsp; </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.marca }} </td>
           </ng-container>
 
           <!-- Modelo -->
           <ng-container matColumnDef="modelo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Modelo </th>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header> Modelo&nbsp;&nbsp; </th>
             <td mat-cell *matCellDef="let stock"> {{ stock.modelo }} </td>
           </ng-container>
 
           <ng-container matColumnDef="consumible">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Consumible </th>
-            <td mat-cell *matCellDef="let stock"> {{ stock.consumible ? 'Sí' : 'No' }} </td>
+            <th mat-header-cell *matHeaderCellDef mat-sort-header matTooltip="Consumible">C</th>
+            <td mat-cell *matCellDef="let stock">
+              <mat-icon color="primary" *ngIf="stock.consumible">check_circle</mat-icon>
+              <mat-icon color="warn" *ngIf="!stock.consumible">cancel</mat-icon>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="conDevolucion">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header matTooltip="Con Devolución">D</th>
+            <td mat-cell *matCellDef="let stock">
+              <mat-icon color="primary" *ngIf="stock.conDevolucion">check_circle</mat-icon>
+              <mat-icon color="warn" *ngIf="!stock.conDevolucion">cancel</mat-icon>
+            </td>
           </ng-container>
 
           <!-- Numero De Serie -->
           <ng-container matColumnDef="numeroDeSerie">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Números De Serie </th>
+            <th mat-header-cell *matHeaderCellDef> N° Serie </th>
             <td mat-cell *matCellDef="let stock">
               <button mat-icon-button color="accent" (click)="verNumerosDeSerie(stock, { activo: true, empleadoCustodia: legajoCustodia ?? undefined })">
                 <mat-icon>list</mat-icon>
@@ -261,14 +315,8 @@
             </td>
           </ng-container>
 
-          <!-- Tipo -->
-          <ng-container matColumnDef="tipo">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Tipo </th>
-            <td mat-cell *matCellDef="let stock"> {{ stock.tipo }} </td>
-          </ng-container>
-
           <ng-container matColumnDef="detalles">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Detalles </th>
+            <th mat-header-cell *matHeaderCellDef> Detalles </th>
             <td mat-cell *matCellDef="let stock">
               <button mat-icon-button color="accent" (click)="verDetalles(stock)">
                 <mat-icon>list</mat-icon>
@@ -278,7 +326,7 @@
 
           <!-- ✅ Custodia -->
           <ng-container matColumnDef="custodia">
-            <th mat-header-cell *matHeaderCellDef mat-sort-header> Custodias </th>
+            <th mat-header-cell *matHeaderCellDef> Custodias </th>
             <td mat-cell *matCellDef="let stock">
               <button mat-icon-button color="accent" (click)="verCustodias(stock)">
                 <mat-icon>list</mat-icon>

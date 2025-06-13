@@ -180,10 +180,41 @@
             <th mat-header-cell *matHeaderCellDef> Custodia </th>
             <td mat-cell *matCellDef="let empleado">
               <div class="custodia-actions">
-                <button mat-stroked-button color="primary" (click)="listarStock(empleado)">Listar</button>
-                <button mat-stroked-button color="accent" (click)="asignarStock(empleado)">Asignar</button>
-                <button mat-stroked-button color="warn" (click)="quitarStock(empleado)">Quitar</button>
-                <button mat-stroked-button color="primary" (click)="transferirStock(empleado)">Transferir</button>
+                
+                <!-- Listar -->
+                <button mat-icon-button color="primary"
+                        matTooltip="Listar Stock"
+                        (click)="listarStock(empleado)">
+                  <mat-icon>list</mat-icon>
+                </button>
+
+                <!-- Herramientas -->
+                <button mat-icon-button color="primary"
+                        matTooltip="Herramientas"
+                        (click)="abrirHerramientas(empleado)">
+                  <mat-icon>build</mat-icon>
+                </button>
+
+                <!-- Asignar -->
+                <button mat-icon-button color="accent"
+                        matTooltip="Asignar Stock"
+                        (click)="asignarStock(empleado)">
+                  <mat-icon>add_circle</mat-icon>
+                </button>
+
+                <!-- Quitar -->
+                <button mat-icon-button color="warn"
+                        matTooltip="Quitar Stock"
+                        (click)="quitarStock(empleado)">
+                  <mat-icon>remove_circle</mat-icon>
+                </button>
+
+                <!-- Transferir -->
+                <button mat-icon-button color="primary"
+                        matTooltip="Transferir Stock"
+                        (click)="transferirStock(empleado)">
+                  <mat-icon>swap_horiz</mat-icon>
+                </button>
               </div>
             </td>
           </ng-container>

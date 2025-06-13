@@ -13,6 +13,9 @@ import { Contribuyente } from '../../models/contribuyente.model';
 import { DialogService } from '../../services/dialog/dialog.service';
 import { StockFormComponent } from '../stock-form/stock-form.component';
 import { UtilsService } from '../../services/utils/utils.service';
+import { StockService } from '../../services/rest/stock/stock.service';
+import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 @Component({
   selector: 'app-empleado-form',
@@ -45,7 +48,9 @@ export class EmpleadoFormComponent implements OnInit {
                 private contribuyenteService: ContribuyenteService,
                   private dialogService: DialogService,
                    private utils: UtilsService,
-                     @Inject('menuData') public menuData: any) {}
+                    private stockService: StockService,
+                      private dialog: MatDialog,
+                        @Inject('menuData') public menuData: any) {}
 
   ngOnInit(): void {
     this.modoCustodia = this.menuData?.modoCustodia || false;
@@ -206,6 +211,33 @@ export class EmpleadoFormComponent implements OnInit {
         data: data
       }
     }));
+  }
+
+  abrirHerramientas(empleado: Empleado){
+
+     this.stockService.getPrestamosPendientesDeDevolucion(empleado.legajo).subscribe(pendientes => {
+      const rows = pendientes.map(p => ({
+        ...p,
+        producto: `${p.flujo.productoStock.productoNombre} ${p.flujo.productoStock.detalle ?? ''} ${p.flujo.productoStock.marca ?? ''}`.trim(),
+        fechaDevolucion: p.fechaDevolucion ?? '-'
+      }));
+
+      this.dialog.open(ListadoDialogComponent, {
+        width: '1300px',
+        data: {
+          title: `Herramientas Pendientes de Devolución – Legajo ${empleado.legajo}`,
+          columns: ['producto', 'cantidadPendiente', 'fechaDevolucion', 'estadoDevolucion'],
+          columnNames: {
+            producto: 'Producto',
+            cantidadPendiente: 'Cantidad Pendiente',
+            fechaDevolucion: 'Fecha Devolución',
+            estadoDevolucion: 'Estado Devolución'
+          },
+          rows: rows,
+          filterableColumns: ['all']
+        }
+      });
+    });
   }
   
   asignarStock(empleado: Empleado) {

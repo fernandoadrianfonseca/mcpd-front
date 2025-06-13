@@ -36,18 +36,14 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
     color: rgb(2, 152, 229) !important;
 }
 
-.mat-mdc-snack-bar-container {
-    &.snack-bar-success {
-      --mdc-snackbar-container-color: #198754;
-      --mat-mdc-snack-bar-button-color: #fff;
-      --mdc-snackbar-supporting-text-color: #fff;
-    }
-  
-    &.snack-bar-error {
-      --mdc-snackbar-container-color: #dc3545;
-      --mat-mdc-snack-bar-button-color: #fff;
-      --mdc-snackbar-supporting-text-color: #fff;
-    }
+.mat-mdc-snack-bar-container.snack-bar-success .mat-mdc-snackbar-surface {
+  background-color: #198754 !important;
+  color: #fff !important;
+}
+
+.mat-mdc-snack-bar-container.snack-bar-error .mat-mdc-snackbar-surface {
+  background-color: #dc3545 !important;
+  color: #fff !important;
 }
 
 .snack-bar-custom {
