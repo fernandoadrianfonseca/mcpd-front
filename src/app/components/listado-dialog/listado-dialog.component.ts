@@ -16,6 +16,7 @@ export class ListadoDialogComponent implements AfterViewInit{
 
   dataSource: MatTableDataSource<any>;
   activeFilters: { [key: string]: string } = {};
+  finalColumns: string[] = []; 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   
   constructor(
@@ -24,11 +25,18 @@ export class ListadoDialogComponent implements AfterViewInit{
       title: string;
       columns: string[];
       columnNames?: { [key: string]: string };
+      dataSource?: MatTableDataSource<any>;
       rows: any[];
       filterableColumns?: string[];
-    }
-  ) {
-    this.dataSource = new MatTableDataSource(this.data.rows);
+      onRemove?: (row: any) => void; // 👈 callback opcional
+  }) 
+  
+  {
+    this.dataSource = data.dataSource || new MatTableDataSource(data.rows || []);
+    this.finalColumns = [
+      ...this.data.columns,
+      ...(this.data.onRemove ? ['acciones'] : [])
+    ];
   }
 
   ngAfterViewInit(): void {

@@ -10,6 +10,7 @@ import { AuthService } from '../../services/rest/auth/auth.service';
 import { ContribuyenteFormComponent } from '../contribuyente-form/contribuyente-form.component';
 import { EmpleadoFormComponent } from '../empleado-form/empleado-form.component';
 import { ProveedorFormComponent } from '../proveedor-form/proveedor-form.component';
+import { PedidoFormComponent } from '../pedido-form/pedido-form.component';
 
 @Component({
   selector: 'main',
@@ -89,6 +90,28 @@ export class MainComponent implements OnInit, OnDestroy {
             ruta: 'empleado',
             component: EmpleadoFormComponent,
             data: { modoCustodia: true, empleadoLogueado: this.usuario }
+          }
+        ]
+      },
+      {
+        label: 'Pedidos',
+        icon: 'request_quote',
+        position: 100,
+        dependenciasPermitidas: ['Informatica'],
+        subItems: [
+          {
+            label: 'Nuevo',
+            icon: 'note_add',
+            ruta: 'pedido',
+            component: PedidoFormComponent,
+            data: { modo: 'nuevo', empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Listado',
+            icon: 'list',
+            ruta: 'pedido-listado',
+            component: PedidoFormComponent,
+            data: { modo: 'listado', empleadoLogueado: this.usuario }
           }
         ]
       },

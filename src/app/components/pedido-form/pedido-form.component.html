@@ -1,0 +1,266 @@
+<div class="main-container">
+  <ng-container *ngIf="modo === 'nuevo'">
+    <form [formGroup]="pedidoForm" (ngSubmit)="onSubmit()" class="pedido-form">
+      <mat-card>
+        <mat-card-title>Formulario de Pedido</mat-card-title>
+        <div class="form-grid">
+
+          <!-- Tipo de Pedido -->
+          <mat-form-field appearance="outline">
+            <mat-label>Tipo de Pedido</mat-label>
+            <mat-select formControlName="tipo">
+              <mat-option value="Interno">Interno</mat-option>
+              <mat-option value="Adquisicion">Adquisición</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Secretaría -->
+          <mat-form-field appearance="outline">
+            <mat-label>Secretaría</mat-label>
+            <mat-select formControlName="secretaria" required>
+              <mat-option *ngFor="let s of secretarias" [value]="s">{{ s }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Prioridad -->
+          <mat-form-field appearance="outline">
+            <mat-label>Prioridad</mat-label>
+            <mat-select formControlName="prioridad" required>
+              <mat-option *ngFor="let p of prioridades" [value]="p.value">{{ p.label }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Destino -->
+          <mat-form-field appearance="outline">
+            <mat-label>Destino</mat-label>
+            <mat-select formControlName="destino">
+              <mat-option *ngFor="let d of destinos" [value]="d">{{ d }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Imputación -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Imputación</mat-label>
+            <mat-select formControlName="imputacion" required>
+              <mat-option *ngFor="let i of imputaciones" [value]="i.codigo">
+                {{ i.imputacion }} - ({{ i.codigo }}) - {{i.dependencia | uppercase}}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Observaciones -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Observaciones Generales</mat-label>
+            <textarea matInput formControlName="observaciones" rows="3"></textarea>
+          </mat-form-field>
+
+        </div>
+
+        <mat-card-actions class="acciones-pedido">
+          <div class="boton-izquierda">
+            <button mat-flat-button color="warn" type="button" (click)="pedidoForm.reset()">Limpiar</button>
+          </div>
+
+          <div class="botones-derecha">
+            <button mat-flat-button color="primary" type="button" (click)="verPedidoActual()">
+              Ver Productos del Pedido
+            </button>
+            <button mat-flat-button color="primary" type="submit" [disabled]="!pedidoForm.valid">
+              Guardar Pedido
+            </button>
+          </div>
+        </mat-card-actions>
+      </mat-card>
+    </form>
+  </ng-container>
+
+  <ng-container *ngIf="modo === 'nuevo'">
+    <mat-card>
+      <mat-card-title>Lista de Stock</mat-card-title>
+
+      <div class="filter-container">
+        <!-- Filtro por categoría -->
+        <mat-form-field appearance="outline">
+          <mat-label>Categoría</mat-label>
+          <mat-select [(ngModel)]="filterCategoria" (selectionChange)="filtrarStock()">
+            <mat-option value="">Todas</mat-option>
+            <mat-option *ngFor="let c of categorias" [value]="c.nombre">{{ c.nombre }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Filtro por producto -->
+        <mat-form-field appearance="outline">
+          <mat-label>Producto</mat-label>
+          <input matInput [(ngModel)]="filterProducto" (input)="filtrarStock()" />
+        </mat-form-field>
+
+        <!-- Filtro por detalle -->
+        <mat-form-field appearance="outline">
+          <mat-label>Detalle</mat-label>
+          <input matInput [(ngModel)]="filterDetalle" (input)="filtrarStock()" />
+        </mat-form-field>
+      </div>
+
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+
+        <!-- Categoría -->
+        <ng-container matColumnDef="categoria">
+          <th mat-header-cell *matHeaderCellDef> Categoría </th>
+          <td mat-cell *matCellDef="let s"> {{ s.categoria?.nombre }} </td>
+        </ng-container>
+
+        <!-- Producto -->
+        <ng-container matColumnDef="producto">
+          <th mat-header-cell *matHeaderCellDef> Producto </th>
+          <td mat-cell *matCellDef="let s"> {{ s.producto?.nombre }} </td>
+        </ng-container>
+
+        <!-- Detalle -->
+        <ng-container matColumnDef="detalle">
+          <th mat-header-cell *matHeaderCellDef> Detalle </th>
+          <td mat-cell *matCellDef="let s"> {{ s.detalle }} </td>
+        </ng-container>
+
+        <!-- Tipo -->
+        <ng-container matColumnDef="tipo">
+          <th mat-header-cell *matHeaderCellDef> Tipo </th>
+          <td mat-cell *matCellDef="let s"> {{ s.tipo }} </td>
+        </ng-container>
+
+        <!-- Marca -->
+        <ng-container matColumnDef="marca">
+          <th mat-header-cell *matHeaderCellDef> Marca </th>
+          <td mat-cell *matCellDef="let s"> {{ s.marca }} </td>
+        </ng-container>
+
+        <!-- Modelo -->
+        <ng-container matColumnDef="modelo">
+          <th mat-header-cell *matHeaderCellDef> Modelo </th>
+          <td mat-cell *matCellDef="let s"> {{ s.modelo }} </td>
+        </ng-container>
+
+        <!-- Acciones -->
+        <ng-container matColumnDef="acciones">
+          <th mat-header-cell *matHeaderCellDef> Acciones </th>
+          <td mat-cell *matCellDef="let s">
+            <button mat-icon-button color="primary" (click)="agregarAlPedido(s)">
+              <mat-icon>add</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="stockDisplayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: stockDisplayedColumns;"></tr>
+      </table>
+
+      <mat-paginator #stockPaginator [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons></mat-paginator>
+    </mat-card>
+  </ng-container>
+
+  <ng-container *ngIf="modo === 'listado'">
+
+    <mat-card>
+      <mat-card-title>Lista de Pedidos</mat-card-title>
+
+      <!-- Botones de filtro global -->
+      <div class="filtros-botones">
+        <button mat-raised-button
+                [color]="filtroTipoPedido === 'todos' ? 'primary' : ''"
+                (click)="filtrarPorTipo('todos')">
+          Todos
+        </button>
+        <button mat-raised-button
+                [color]="filtroTipoPedido === 'adquisicion' ? 'primary' : ''"
+                (click)="filtrarPorTipo('adquisicion')">
+          Pedidos de Adquisición
+        </button>
+        <button mat-raised-button
+                [color]="filtroTipoPedido === 'interno' ? 'primary' : ''"
+                (click)="filtrarPorTipo('interno')">
+          Pedidos Internos
+        </button>
+        <button mat-raised-button
+                [color]="filtroTipoPedido === 'viejo' ? 'primary' : ''"
+                (click)="filtrarPorTipo('viejo')">
+          Solo Pedidos Viejos
+        </button>
+      </div>
+
+      <div class="filter-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Número</mat-label>
+          <input matInput [(ngModel)]="filterNumero" (input)="filtrarPedidos()">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fecha</mat-label>
+          <input matInput [(ngModel)]="filterFecha" (input)="filtrarPedidos()" placeholder="dd-mm-yyyy">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Solicitante</mat-label>
+          <input matInput [(ngModel)]="filterSolicitante" (input)="filtrarPedidos()">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Prioridad</mat-label>
+          <mat-select [(ngModel)]="filterPrioridad" (selectionChange)="filtrarPedidos()">
+            <mat-option value="">Todas</mat-option>
+            <mat-option value="Normal">Normal</mat-option>
+            <mat-option value="Prioritario">Prioritario</mat-option>
+            <mat-option value="Urgente">Urgente</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <table mat-table [dataSource]="pedidosDataSource" class="mat-elevation-z8">
+
+        <ng-container matColumnDef="numero">
+          <th mat-header-cell *matHeaderCellDef> N° </th>
+          <td mat-cell *matCellDef="let p"> {{ p.numero }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="fechaSolicitud">
+          <th mat-header-cell *matHeaderCellDef> Fecha </th>
+          <td mat-cell *matCellDef="let p"> {{ p.fechaSolicitud | date:'dd-MM-yyyy' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="nombreSolicitante">
+          <th mat-header-cell *matHeaderCellDef> Solicitante </th>
+          <td mat-cell *matCellDef="let p"> {{ p.nombreSolicitante }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="prioridad">
+          <th mat-header-cell *matHeaderCellDef> Prioridad </th>
+          <td mat-cell *matCellDef="let p">
+            {{
+              p.prioridad === 1 ? 'Urgente' :
+              p.prioridad === 2 ? 'Prioritario' :
+              'Normal'
+            }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="presupuesto">
+          <th mat-header-cell *matHeaderCellDef> Presupuesto </th>
+          <td mat-cell *matCellDef="let p"> {{ p.presupuesto | number:'1.2-2' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="detalles">
+          <th mat-header-cell *matHeaderCellDef> Detalles </th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button color="primary" (click)="abrirListadoDetalle(p)">
+              <mat-icon>list</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="pedidosDisplayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: pedidosDisplayedColumns;"></tr>
+      </table>
+
+      <mat-paginator #pedidoPaginator [pageSizeOptions]="[20, 50, 100]" showFirstLastButtons></mat-paginator>
+    </mat-card>
+  </ng-container>
+
+</div>
