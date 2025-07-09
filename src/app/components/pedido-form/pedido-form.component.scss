@@ -180,3 +180,29 @@ button[mat-raised-button]:hover:not(:disabled) {
     }
   }
 }
+
+.estado {
+  font-weight: bold;
+
+  &.estado-pendiente {
+    color: black;
+  }
+  &.estado-presupuesto {
+    color: #5bc0de; // azul claro
+  }
+  &.estado-despacho {
+    color: #007bff; // azul
+  }
+  &.estado-rechazado {
+    color: #dc3545; // rojo
+  }
+  &.estado-orden-compra {
+    color: #ff6666; // rojo claro
+  }
+  &.estado-facturada {
+    color: #28a74599; // verde claro
+  }
+  &.estado-pagado {
+    color: #28a745; // verde
+  }
+}

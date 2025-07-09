@@ -56,6 +56,7 @@ export class Pedido {
   adquisicion!: boolean;
   nuevoSistema!: boolean;
   updated?: string;
+  estado?: string;
   detalles?: PedidoDetalle[];
 
   constructor(init?: Partial<Pedido>) {

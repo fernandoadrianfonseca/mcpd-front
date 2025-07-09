@@ -13,6 +13,7 @@ import { DynamicFormDialogComponent } from '../dynamic-form-dialog/dynamic-form-
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { ListadoDialogComponent } from '../listado-dialog/listado-dialog.component';
 import { MatPaginator } from '@angular/material/paginator';
+import { MatSort } from '@angular/material/sort';
 import { UtilsService } from '../../services/utils/utils.service';
 import { Pedido } from '../../models/pedido.model';
 
@@ -49,6 +50,7 @@ export class PedidoFormComponent implements OnInit {
   filterFecha: string = '';
   filterSolicitante: string = '';
   filterPrioridad: string = '';
+  filterEstado: string = '';
   modo: string = '';
   pedidosDisplayedColumns: string[] = [];
   pedidosDataSource = new MatTableDataSource<Pedido>([]);
@@ -78,6 +80,8 @@ export class PedidoFormComponent implements OnInit {
 
   @ViewChild('stockPaginator') stockPaginator!: MatPaginator;
   @ViewChild('pedidoPaginator') pedidoPaginator!: MatPaginator;
+  @ViewChild('stockSort') stockSort!: MatSort;
+  @ViewChild('pedidoSort') pedidoSort!: MatSort;
 
   constructor(private fb: FormBuilder,
                 private comprasService: ComprasService,
@@ -107,7 +111,7 @@ export class PedidoFormComponent implements OnInit {
     });
 
     if (this.modo === 'listado') {
-      this.pedidosDisplayedColumns = ['numero', 'fechaSolicitud', 'nombreSolicitante', 'prioridad', 'presupuesto', 'detalles'];
+      this.pedidosDisplayedColumns = ['numero', 'fechaSolicitud', 'nombreSolicitante', 'prioridad', 'presupuesto', 'estado', 'detalles'];
       this.obtenerPedidos();
     }
   }
@@ -115,16 +119,19 @@ export class PedidoFormComponent implements OnInit {
   ngAfterViewInit() {
     if (this.modo === 'nuevo') {
       this.dataSource.paginator = this.stockPaginator;
+      this.dataSource.sort = this.stockSort;
     } else if (this.modo === 'listado') {
       this.pedidosDataSource.paginator = this.pedidoPaginator;
+      this.pedidosDataSource.sort = this.pedidoSort;
       this.pedidosDataSource.filterPredicate = (data: Pedido, filter: string) => {
-        const { numero, fecha, solicitante, prioridad, tipoPedido } = JSON.parse(filter);
+        const { numero, fecha, solicitante, prioridad, tipoPedido, estado } = JSON.parse(filter);
 
         const numeroMatch = !numero || data.numero.toString().includes(numero);
         const fechaMatch = !fecha || this.utils.formatDateToDDMMYYYYUniversal(data.fechaSolicitud).includes(fecha);
         const solicitanteMatch = !solicitante || data.nombreSolicitante.toLowerCase().includes(solicitante.toLowerCase());
         const prioridadTexto = data.prioridad === 1 ? 'Urgente' : data.prioridad === 2 ? 'Prioritario' : 'Normal';
         const prioridadMatch = !prioridad || prioridadTexto === prioridad;
+        const estadoMatch = !estado || (!!data.estado && data.estado.toLowerCase() === estado.toLowerCase());
 
         // filtro de tipo
         let tipoMatch = true;
@@ -136,8 +143,21 @@ export class PedidoFormComponent implements OnInit {
           tipoMatch = data.nuevoSistema === false;
         }
 
-        return numeroMatch && fechaMatch && solicitanteMatch && prioridadMatch && tipoMatch;
+        return numeroMatch && fechaMatch && solicitanteMatch && prioridadMatch && tipoMatch && estadoMatch;
       };
+    }
+  }
+
+  getEstadoClass(estado: string): string {
+    switch (estado) {
+      case 'Pendiente': return 'estado-pendiente';
+      case 'En Proceso De Presupuesto': return 'estado-presupuesto';
+      case 'En Despacho': return 'estado-despacho';
+      case 'Rechazados': return 'estado-rechazado';
+      case 'Con Orden De Compra': return 'estado-orden-compra';
+      case 'Facturada': return 'estado-facturada';
+      case 'Pagado': return 'estado-pagado';
+      default: return '';
     }
   }
 
@@ -152,7 +172,8 @@ export class PedidoFormComponent implements OnInit {
       fecha: this.filterFecha,
       solicitante: this.filterSolicitante,
       prioridad: this.filterPrioridad,
-      tipoPedido: this.filtroTipoPedido
+      tipoPedido: this.filtroTipoPedido,
+      estado: this.filterEstado
     };
     this.pedidosDataSource.filter = JSON.stringify(filterObject);
   }
@@ -233,6 +254,29 @@ export class PedidoFormComponent implements OnInit {
       return;
     }
 
+    const tipoPedido = this.pedidoForm.value.tipo;
+    const icon = this.pedidoForm.value.tipo === 'Adquisicion' ? 'shopping_cart' : 'description';
+    const iconColor = this.pedidoForm.value.tipo === 'Adquisicion' ? '#1976d2' : '#2e7d32';
+
+    const confirmDialog = this.dialog.open(ConfirmDialogComponent, {
+      width: '500px',
+      data: {
+        message: `¿Está seguro que desea cargar el pedido ${tipoPedido}?`,
+        icon: icon,
+        iconColor: iconColor,
+        title: 'Confirmar Carga',
+        okLabel: 'Sí, Cargar'
+      }
+    });
+
+    confirmDialog.afterClosed().subscribe(result => {
+      if (result === true) {
+        this.guardarPedido();
+      }
+    });
+  }
+
+  private guardarPedido(): void {
     const now = new Date();
     const nuevoPedido = {
       fechaSolicitud: now.toISOString(),
@@ -265,15 +309,13 @@ export class PedidoFormComponent implements OnInit {
       haciendaLegajoEmpleado: null,
       pañolEmpleado: null,
       pañolLegajoEmpleado: null,
-      adquisicion: false,
+      adquisicion: this.pedidoForm.value.tipo === 'Adquisicion',
       nuevoSistema: true
     };
 
     this.comprasService.crearPedido(nuevoPedido).subscribe({
       next: (pedidoCreado) => {
         console.log('Pedido creado:', pedidoCreado);
-
-        // Ahora enviar los detalles
         this.guardarDetallesDelPedido(pedidoCreado.numero);
       },
       error: (err) => {
@@ -286,6 +328,7 @@ export class PedidoFormComponent implements OnInit {
       }
     });
   }
+
 
   guardarDetallesDelPedido(idPedido: number): void {
 
