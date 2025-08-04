@@ -24,6 +24,10 @@ export class MainComponent implements OnInit, OnDestroy {
   private navigationHistory: { component: any, data?: any, url: string }[] = [];
   selectedComponent: any = null;
   selectedComponentData: any = null;
+  modoNuevo: boolean = false;
+  modoListado: boolean = false;
+  modoEdicion: boolean = false;
+  modoPresupuesto: boolean = false;
   modoCustodia: boolean = false;
   modoAsignar: boolean = false;
   modoTransferir: boolean = false;
@@ -55,6 +59,10 @@ export class MainComponent implements OnInit, OnDestroy {
     this.modoTransferir = queryParams.has('modo') && queryParams.get('modo') === 'transferir';
     this.modoQuitar = queryParams.has('modo') && queryParams.get('modo') === 'quitar';
     this.modoCustodia = queryParams.has('modo') && queryParams.get('modo') === 'custodia';
+    this.modoPresupuesto = queryParams.has('modo') && queryParams.get('modo') === 'presupuesto';
+    this.modoNuevo = queryParams.has('modo') && queryParams.get('modo') === 'nuevo';
+    this.modoListado = queryParams.has('modo') && queryParams.get('modo') === 'listado';
+    this.modoEdicion = queryParams.has('modo') && queryParams.get('modo') === 'edicion';
 
     this.menuItems = [
       {
@@ -90,6 +98,13 @@ export class MainComponent implements OnInit, OnDestroy {
             ruta: 'empleado',
             component: EmpleadoFormComponent,
             data: { modoCustodia: true, empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Pedidos',
+            icon: 'assignment',
+            ruta: 'pedido',
+            component: PedidoFormComponent,
+            data: { modo: 'patrimonio', empleadoLogueado: this.usuario }
           }
         ]
       },
@@ -112,6 +127,13 @@ export class MainComponent implements OnInit, OnDestroy {
             ruta: 'pedido-listado',
             component: PedidoFormComponent,
             data: { modo: 'listado', empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Edición',
+            icon: 'edit_note',
+            ruta: 'pedido-edicion',
+            component: PedidoFormComponent,
+            data: { modo: 'edicion', empleadoLogueado: this.usuario }
           }
         ]
       },
@@ -172,6 +194,11 @@ export class MainComponent implements OnInit, OnDestroy {
       this.modoTransferir = this.selectedComponentData.modoTransferir ?? false;
       this.modoQuitar = this.selectedComponentData.modoQuitar ?? false;
       this.modoCustodia = this.selectedComponentData.modoCustodia ?? false;
+      const modo = this.selectedComponentData?.modo;
+      this.modoNuevo = modo === 'nuevo';
+      this.modoListado = modo === 'listado';
+      this.modoEdicion = modo === 'edicion';
+      this.modoPresupuesto = modo === 'presupuesto';
   
       // ✅ Actualizar el injector
       this.customInjector = Injector.create({
@@ -215,6 +242,11 @@ export class MainComponent implements OnInit, OnDestroy {
       this.selectedComponent = component;
       this.selectedComponentData = data || {};
       this.customInjector = null;
+      const modo = this.selectedComponentData.modo;
+      this.modoNuevo = modo === 'nuevo';
+      this.modoListado = modo === 'listado';
+      this.modoEdicion = modo === 'edicion';
+      this.modoPresupuesto = modo === 'presupuesto';
 
       const found = this.menuItems
         .flatMap(item => item.subItems || [item])
@@ -231,6 +263,10 @@ export class MainComponent implements OnInit, OnDestroy {
         if (data.modoTransferir) params.push('modo=transferir');
         if (data.modoQuitar) params.push('modo=quitar');
         if (data.modoCustodia) params.push('modo=custodia');
+        if (this.modoPresupuesto) params.push('modo=presupuesto');
+        if (this.modoNuevo) params.push('modo=nuevo');
+        if (this.modoListado) params.push('modo=listado');
+        if (this.modoEdicion) params.push('modo=edicion');
         if (params.length > 0) {
           url += '?' + params.join('&');
         }

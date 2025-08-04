@@ -24,13 +24,13 @@ import { ConfirmTableDialogComponent } from '../confirm-table-dialog/confirm-tab
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/material/core';
 import { MomentDateAdapter } from '@angular/material-moment-adapter';
-import { ReporteService } from '../../services/rest/reporte/reporte.service';
 import { UtilsService } from '../../services/utils/utils.service';
+import { ReporteUtilsService } from '../../services/utils/reporte-utils.service';
 
-interface StockParaOperar {
+export interface StockParaOperar {
   stock: ProductosStock;
   cantidad: number;
-  observaciones: string | null;
+  observaciones: string | null | undefined;
   numerosDeSerie?: [];
 }
 
@@ -93,7 +93,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   constructor(
     private fb: FormBuilder,
     private stockService: StockService,
-    private reporteService: ReporteService,
+    private reporteUtils: ReporteUtilsService,
     private empleadoService: EmpleadoService,
     private categoriaService: CategoriaService,
     private productoService: ProductoService,
@@ -640,17 +640,48 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
         // Generar reporte de consumibles
         if (consumibles.length) {
-          this.generarReporteAsignacion(consumibles, 'acta-entrega-patrimonial');
-        }
-  
-        // Generar reporte de no consumibles
-        if (sinFecha.length) {
-          this.generarReporteAsignacion(sinFecha, 'acta-alta-patrimonial');
+          this.reporteUtils.generarReporteAsignacion(consumibles, 'acta-entrega-patrimonial', {
+            generaReporteLegajo: legajoCarga,
+            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleado: legajoCustodia,
+            nombreEmpleado: nombre,
+            legajoEmpleadoEntrega: legajoCarga,
+            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleadoRecibe: legajoCarga,
+            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
+            dependenciaAutoriza: this.dependenciaControl.value
+          });
         }
 
-        // Generar reporte no consumible con devolución
+        // Generar reporte de no consumibles sin devolución
+        if (sinFecha.length) {
+          this.reporteUtils.generarReporteAsignacion(sinFecha, 'acta-alta-patrimonial', {
+            generaReporteLegajo: legajoCarga,
+            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleado: legajoCustodia,
+            nombreEmpleado: nombre,
+            legajoEmpleadoEntrega: legajoCarga,
+            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleadoRecibe: legajoCarga,
+            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
+            dependenciaAutoriza: this.dependenciaControl.value
+          });
+        }
+
+        // Generar reporte de no consumibles con devolución
         if (conFecha.length) {
-          this.generarReporteAsignacion(conFecha, 'acta-alta-patrimonial-confecha', fechaDevolucion);
+          this.reporteUtils.generarReporteAsignacion(conFecha, 'acta-alta-patrimonial-confecha', {
+            generaReporteLegajo: legajoCarga,
+            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleado: legajoCustodia,
+            nombreEmpleado: nombre,
+            legajoEmpleadoEntrega: legajoCarga,
+            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleadoRecibe: legajoCarga,
+            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
+            dependenciaAutoriza: this.dependenciaControl.value,
+            fechaDevolucion: fechaDevolucion
+          });
         }
   
         // Limpiar selección y recargar stock
@@ -716,7 +747,17 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Quitado ' + JSON.stringify(items) + ' ' + legajoCustodia + ' ' + legajoCarga);
   
         // Generar reporte de baja
-        this.generarReporteAsignacion(this.stockParaOperar, 'acta-baja-patrimonial');
+        this.reporteUtils.generarReporteAsignacion(this.stockParaOperar, 'acta-baja-patrimonial', {
+          generaReporteLegajo: legajoCarga,
+          generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+          legajoEmpleado: legajoCustodia,
+          nombreEmpleado: nombre,
+          legajoEmpleadoEntrega: legajoCarga,
+          nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
+          legajoEmpleadoRecibe: legajoCarga,
+          nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
+          dependenciaAutoriza: this.dependenciaControl.value
+        });
   
         // Limpiar selección y recargar stock
         this.stockParaOperar = [];
@@ -782,7 +823,17 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Transferido ' + JSON.stringify(items) + ' ' + legajoOrigen + ' ' + legajoDestino);
   
         // Generar reporte de transferencia
-        this.generarReporteAsignacion(this.stockParaOperar, 'acta-transferencia-patrimonial');
+        this.reporteUtils.generarReporteAsignacion(this.stockParaOperar, 'acta-transferencia-patrimonial', {
+          generaReporteLegajo: legajoCarga,
+          generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+          legajoEmpleado: legajoOrigen,
+          nombreEmpleado: this.menuData?.empleado?.nombre,
+          legajoEmpleadoEntrega: legajoOrigen,
+          nombreEmpleadoEntrega: this.menuData?.empleado?.nombre,
+          legajoEmpleadoRecibe: legajoDestino,
+          nombreEmpleadoRecibe: this.empleadoSeleccionado?.nombre,
+          dependenciaAutoriza: this.dependenciaControl.value
+        });
   
         // Limpiar selección y recargar stock
         this.stockParaOperar = [];
@@ -793,7 +844,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }
   }
 
-  generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string, fechaDevolucion?: Date | null): void {
+  /*generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string, fechaDevolucion?: Date | null): void {
 
     let cantidadCopias=1;
     const generaReporteLegajo = this.menuData?.empleadoLogueado?.legajo;
@@ -858,7 +909,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       const url = window.URL.createObjectURL(blob);
       window.open(url);
     });
-  }
+  }*/
   
   //download
   /*const a = document.createElement('a');
@@ -1005,20 +1056,20 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   abrirModalBajaStock(stock: ProductosStock): void {
-  const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
-    width: '820px',
-    data: {
-      title: `Dar De Baja Stock: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
-      fields: [
-        { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
-        { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
-        { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-        { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
-      ]
-    }
-  });
+    const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
+      width: '820px',
+      data: {
+        title: `Dar De Baja Stock: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+        fields: [
+          { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
+          { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
+          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
+        ]
+      }
+    });
 
-  dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe(result => {
 
       if (result) {
         const cantidadBaja = +result.cantidad;

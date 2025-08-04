@@ -1,26 +1,33 @@
 <div class="main-container">
-  <ng-container *ngIf="modo === 'nuevo'">
+  <ng-container *ngIf="modo === 'nuevo' || modo === 'edicion-pedido'">
     <form [formGroup]="pedidoForm" (ngSubmit)="onSubmit()" class="pedido-form">
       <mat-card>
-        <mat-card-title>Formulario de Pedido</mat-card-title>
+        <mat-card-title *ngIf="!modoEdicionPedido">Nuevo Pedido</mat-card-title>
+        <mat-card-title *ngIf="modoEdicionPedido">Editar Pedido Nº {{pedidoSeleccionado?.numero}}</mat-card-title>
         <div class="form-grid">
 
           <!-- Tipo de Pedido -->
           <mat-form-field appearance="outline">
             <mat-label>Tipo de Pedido</mat-label>
-            <mat-select formControlName="tipo">
+            <mat-select formControlName="tipo" [disabled]="sinPermisoAdquisicion">
               <mat-option value="Interno">Interno</mat-option>
               <mat-option value="Adquisicion">Adquisición</mat-option>
             </mat-select>
           </mat-form-field>
 
           <!-- Secretaría -->
-          <mat-form-field appearance="outline">
-            <mat-label>Secretaría</mat-label>
-            <mat-select formControlName="secretaria" required>
-              <mat-option *ngFor="let s of secretarias" [value]="s">{{ s }}</mat-option>
-            </mat-select>
-          </mat-form-field>
+          <ng-container *ngIf="pedidoForm.get('tipo')?.value === 'Adquisicion'">
+            <mat-form-field appearance="outline">
+              <mat-label>Secretaría</mat-label>
+              <input type="text" matInput [formControl]="secretariaControl" [matAutocomplete]="autoSecretaria" placeholder="Buscar Secretaria...">
+              <mat-autocomplete #autoSecretaria="matAutocomplete" [displayWith]="displayNombre"
+                                (optionSelected)="pedidoForm.get('secretaria')?.setValue($event.option.value)">
+                <mat-option *ngFor="let s of filteredSecretarias | async" [value]="s.nombre">
+                  {{ s.nombre }}
+                </mat-option>
+              </mat-autocomplete>
+            </mat-form-field>
+          </ng-container>
 
           <!-- Prioridad -->
           <mat-form-field appearance="outline">
@@ -31,22 +38,36 @@
           </mat-form-field>
 
           <!-- Destino -->
-          <mat-form-field appearance="outline">
+          <mat-form-field appearance="outline" [class.full-width]="pedidoForm.get('tipo')?.value === 'Interno'">
             <mat-label>Destino</mat-label>
-            <mat-select formControlName="destino">
-              <mat-option *ngFor="let d of destinos" [value]="d">{{ d }}</mat-option>
-            </mat-select>
+            <input type="text" matInput [formControl]="destinoControl" 
+                                        [matAutocomplete]="autoDestino" 
+                                        placeholder="Buscar Destino..."
+                                        (click)="borrarCampoSeleccionado(destinoControl, 'destino')">
+            <mat-autocomplete #autoDestino="matAutocomplete" [displayWith]="displayNombre"
+                              (optionSelected)="pedidoForm.get('destino')?.setValue($event.option.value)">
+              <mat-option *ngFor="let d of filteredDestinos | async" [value]="d.nombre">
+                {{ d.nombre }}
+              </mat-option>
+            </mat-autocomplete>
           </mat-form-field>
 
           <!-- Imputación -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Imputación</mat-label>
-            <mat-select formControlName="imputacion" required>
-              <mat-option *ngFor="let i of imputaciones" [value]="i.codigo">
-                {{ i.imputacion }} - ({{ i.codigo }}) - {{i.dependencia | uppercase}}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+          <ng-container>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Imputación</mat-label>
+              <input type="text" matInput [formControl]="imputacionControl" 
+                                          [matAutocomplete]="autoImputacion"
+                                          placeholder="Buscar Imputación..."
+                                          (click)="borrarCampoSeleccionado(imputacionControl, 'imputacion')">
+              <mat-autocomplete #autoImputacion="matAutocomplete" [displayWith]="displayImputacion"
+                                (optionSelected)="pedidoForm.get('imputacion')?.setValue($event.option.value)">
+                <mat-option *ngFor="let i of filteredImputaciones | async" [value]="i.codigo">
+                  {{ i.imputacion }} - ({{ i.codigo }}) - {{ i.dependencia | uppercase }}
+                </mat-option>
+              </mat-autocomplete>
+            </mat-form-field>
+          </ng-container> 
 
           <!-- Observaciones -->
           <mat-form-field appearance="outline" class="full-width">
@@ -74,7 +95,7 @@
     </form>
   </ng-container>
 
-  <ng-container *ngIf="modo === 'nuevo'">
+  <ng-container *ngIf="modo === 'nuevo' || modo === 'edicion-pedido'">
     <mat-card>
       <mat-card-title>Lista de Stock</mat-card-title>
 
@@ -158,34 +179,37 @@
     </mat-card>
   </ng-container>
 
-  <ng-container *ngIf="modo === 'listado'">
+  <ng-container *ngIf="modo === 'listado' || modo === 'edicion' || modo === 'patrimonio'">
 
     <mat-card>
-      <mat-card-title>Lista de Pedidos</mat-card-title>
+      <mat-card-title *ngIf="modo === 'listado' || modo === 'edicion'">Lista de Pedidos</mat-card-title>
+      <mat-card-title *ngIf="modo === 'patrimonio'">Lista de Pedidos Internos Pendientes Con Stock Disponible</mat-card-title>
 
       <!-- Botones de filtro global -->
-      <div class="filtros-botones">
-        <button mat-raised-button
-                [color]="filtroTipoPedido === 'todos' ? 'primary' : ''"
-                (click)="filtrarPorTipo('todos')">
-          Todos
-        </button>
-        <button mat-raised-button
-                [color]="filtroTipoPedido === 'adquisicion' ? 'primary' : ''"
-                (click)="filtrarPorTipo('adquisicion')">
-          Pedidos de Adquisición
-        </button>
-        <button mat-raised-button
-                [color]="filtroTipoPedido === 'interno' ? 'primary' : ''"
-                (click)="filtrarPorTipo('interno')">
-          Pedidos Internos
-        </button>
-        <button mat-raised-button
-                [color]="filtroTipoPedido === 'viejo' ? 'primary' : ''"
-                (click)="filtrarPorTipo('viejo')">
-          Solo Pedidos Viejos
-        </button>
-      </div>
+      <ng-container *ngIf="modo === 'listado' || modo === 'edicion'">
+        <div class="filtros-botones">
+          <button mat-raised-button
+                  [color]="filtroTipoPedido === 'todos' ? 'primary' : ''"
+                  (click)="filtrarPorTipo('todos')">
+            Todos
+          </button>
+          <button mat-raised-button
+                  [color]="filtroTipoPedido === 'adquisicion' ? 'primary' : ''"
+                  (click)="filtrarPorTipo('adquisicion')">
+            Pedidos de Adquisición
+          </button>
+          <button mat-raised-button
+                  [color]="filtroTipoPedido === 'interno' ? 'primary' : ''"
+                  (click)="filtrarPorTipo('interno')">
+            Pedidos Internos
+          </button>
+          <button mat-raised-button
+                  [color]="filtroTipoPedido === 'viejo' ? 'primary' : ''"
+                  (click)="filtrarPorTipo('viejo')">
+            Solo Pedidos Viejos
+          </button>
+        </div>
+      </ng-container>
 
       <div class="filter-container">
         <mat-form-field appearance="outline">
@@ -280,11 +304,210 @@
           </td>
         </ng-container>
 
+        <!-- AUTORIZA PAÑOL -->
+        <ng-container matColumnDef="autorizaPañol">
+          <th mat-header-cell *matHeaderCellDef> Autorizado Pañol </th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button
+                    (click)="autorizarPedido(p, 'pañol')"
+                    [disabled]="!puedeAutorizarPanol(p)">
+              <mat-icon [color]="p['pañol'] > 0 ? 'primary' : 'warn'">
+                {{ p['pañol'] > 0 ? 'check_circle' : 'cancel' }}
+              </mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- AUTORIZA HACIENDA -->
+        <ng-container matColumnDef="autorizaHacienda">
+          <th mat-header-cell *matHeaderCellDef> Autorizado Hacienda </th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button
+                    (click)="autorizarPedido(p, 'hacienda')"
+                    [disabled]="!puedeAutorizarHacienda(p)">
+              <mat-icon [color]="p['hacienda'] > 0 ? 'primary' : 'warn'">
+                {{ p['hacienda'] > 0 ? 'check_circle' : 'cancel' }}
+              </mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- PRESUPUESTOS -->
+        <ng-container matColumnDef="presupuestos">
+          <th mat-header-cell *matHeaderCellDef> Presupuestos </th>
+          <td mat-cell *matCellDef="let pedido">
+            <ng-container *ngIf="pedido.adquisicion; else noPresupuesto">
+              <button mat-icon-button color="accent" (click)="verPresupuestos(pedido)">
+                <mat-icon>attach_money</mat-icon>
+              </button>
+            </ng-container>
+            <ng-template #noPresupuesto>
+              <mat-icon color="warn" matTooltip="Pedido interno">block</mat-icon>
+            </ng-template>
+          </td>
+        </ng-container>
+        
+        <ng-container *ngIf="modo === 'edicion'" matColumnDef="editar">
+          <th mat-header-cell *matHeaderCellDef> Editar </th>
+          <td mat-cell *matCellDef="let pedido">
+            <ng-container *ngIf="!pedido.archivado && pedido.nuevoSistema; else noPresupuesto">
+              <button mat-icon-button color="primary" (click)="editarPedido(pedido)">
+                <mat-icon>edit</mat-icon>
+              </button>
+            </ng-container>
+            <ng-template #noPresupuesto>
+              <mat-icon color="warn" matTooltip="Pedido Archivado o De Sistema Viejo">block</mat-icon>
+            </ng-template>  
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="entregaStock">
+          <th mat-header-cell *matHeaderCellDef> Entrega De Stock </th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button color="primary" (click)="entregaDeStockPedidoInterno(p)">
+              <mat-icon>assignment_turned_in</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
         <tr mat-header-row *matHeaderRowDef="pedidosDisplayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: pedidosDisplayedColumns;"></tr>
       </table>
 
+      <div *ngIf="pedidosDataSource?.data?.length === 0" class="mensaje-vacio">
+        <mat-icon>info</mat-icon>
+        <span>Sin Pedidos Internos Pendientes Con Stock Disponible</span>
+      </div>
+
       <mat-paginator #pedidoPaginator [pageSizeOptions]="[20, 50, 100]" showFirstLastButtons></mat-paginator>
+    </mat-card>
+  </ng-container>
+
+  <ng-container *ngIf="modo === 'presupuesto'">
+    <form [formGroup]="presupuestoForm" (ngSubmit)="guardarPresupuesto()" class="pedido-form">
+      <mat-card>
+        <mat-card-title>Nuevo Presupuesto Del Pedido N° {{ pedidoSeleccionado?.numero }}</mat-card-title>
+        <div class="form-grid">
+
+          <!-- Proveedor -->
+          <mat-form-field appearance="outline" class="full-width" floatLabel="auto">
+            <mat-label>Proveedor</mat-label>
+            <input type="text"
+                  matInput
+                  [formControl]="proveedorControl"
+                  [matAutocomplete]="autoProveedor"
+                  placeholder="Buscar proveedor...">
+            <mat-autocomplete #autoProveedor="matAutocomplete"
+                              [displayWith]="displayProveedor"
+                              (optionSelected)="presupuestoForm.get('proveedor')?.setValue($event.option.value)">
+              <mat-option *ngFor="let p of filteredProveedores | async" [value]="p">
+                {{ p.cuit }} - {{ p.nombre || 'Sin nombre' }}{{ p.nombreFantasia ? ' - ' + p.nombreFantasia : '' }}
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <!-- Observaciones -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Observaciones</mat-label>
+            <textarea matInput formControlName="observaciones" rows="3"></textarea>
+          </mat-form-field>
+
+        </div>
+
+        <mat-card-actions class="acciones-pedido">
+          <div class="boton-izquierda">
+            <button mat-flat-button color="warn" type="button" (click)="limpiarPresupuestoForm()">Limpiar</button>
+          </div>
+          <div class="botones-derecha">
+            <button mat-flat-button color="primary" type="button" (click)="guardarPresupuesto()" [disabled]="!presupuestoForm.valid">
+              Guardar Presupuesto
+            </button>
+          </div>
+        </mat-card-actions>
+      </mat-card>
+    </form>
+  </ng-container>
+
+  <ng-container *ngIf="modo === 'presupuesto'">
+    <mat-card>
+      <mat-card-title>Presupuestos del Pedido N° {{ pedidoSeleccionado?.numero }}</mat-card-title>
+
+      <div class="filter-container">
+        <mat-form-field appearance="outline">
+          <mat-label>Proveedor</mat-label>
+          <input matInput [(ngModel)]="filterPresupuestoProveedor" (input)="filtrarPresupuestos()" placeholder="CUIT">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Razón</mat-label>
+          <input matInput [(ngModel)]="filterPresupuestoRazon" (input)="filtrarPresupuestos()">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Fantasia</mat-label>
+          <input matInput [(ngModel)]="filterPresupuestoFantasia" (input)="filtrarPresupuestos()">
+        </mat-form-field>
+      </div>
+
+      <table mat-table [dataSource]="presupuestosDataSource" matSort #presupuestoSort="matSort" class="mat-elevation-z8">
+
+        <ng-container matColumnDef="numero">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> N° </th>
+          <td mat-cell *matCellDef="let p"> {{ p.numero }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="proveedor">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> CUIT </th>
+          <td mat-cell *matCellDef="let p"> {{ p.proveedor?.cuit }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="razon">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Razón </th>
+          <td mat-cell *matCellDef="let p"> {{ p.razon }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="fantasia">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Fantasía </th>
+          <td mat-cell *matCellDef="let p"> {{ p.fantasia }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="total">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Total </th>
+          <td mat-cell *matCellDef="let p"> {{ p.total | currency:'' }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="observaciones">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Obs. </th>
+          <td mat-cell *matCellDef="let p"> {{ p.observaciones }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="observaAdjudicacion">
+          <th mat-header-cell *matHeaderCellDef mat-sort-header> Adjudicación </th>
+          <td mat-cell *matCellDef="let p"> {{ p.observaAdjudicacion }} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="detalle">
+          <th mat-header-cell *matHeaderCellDef> Detalle </th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button color="accent" (click)="abrirPresupuestoDetalle(p)">
+              <mat-icon>list</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="agregar">
+          <th mat-header-cell *matHeaderCellDef> Agregar Detalle </th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button color="primary" (click)="agregarDetallePresupuesto(p)">
+              <mat-icon>edit_note</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="presupuestosDisplayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: presupuestosDisplayedColumns;"></tr>
+      </table>
+      <mat-paginator #presupuestoPaginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons></mat-paginator>
     </mat-card>
   </ng-container>
 

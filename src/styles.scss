@@ -65,3 +65,7 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
     position: absolute !important; /* Lo saca del flujo del flexbox */
     right: 0px; /* Ajusta la posición del icono */
 }
+
+button.mat-icon-button {
+  cursor: pointer !important;
+}

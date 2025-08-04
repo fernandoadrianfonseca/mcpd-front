@@ -6,12 +6,16 @@ import { ConfigService } from '../config/config.service';
 import { ErrorHandlerService } from '../error-handler/error-handler.service';
 import { MatSnackBar, MatSnackBarVerticalPosition } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { UtilsService } from '../utils/utils.service';
+import { Log } from '../../models/log.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RestService {
   private apiUrl: string;
+  private storedUser: any;
+  private usuario: any;
 
   constructor(private http: HttpClient,
               private configService: ConfigService,
@@ -20,6 +24,11 @@ export class RestService {
               private router: Router) {
 
     this.apiUrl = configService.apiUrl;
+    this.storedUser = localStorage.getItem('usuario');
+    if(this.storedUser){
+      this.usuario = JSON.parse(this.storedUser);
+    }
+    
   }
 
   get<T>(endpoint: string, options?: {skipErrorHandler?: boolean; params?: HttpParams; }): Observable<T> {
@@ -85,7 +94,7 @@ export class RestService {
       this.showMessage(`${operation}: ${parsedErrorMessage} ${errorMessage}`, 'error', 1000000, 'top', true);
       this.errorHandler.showError(parsedErrorMessage + ' ' + errorMessage);
     }
-    
+    this.guardarLog(this.usuario?.nombre ?? 'Sin Loguear', 'ERROR: ' + parsedErrorMessage + ' ' + errorMessage);
     return throwError(() => new Error(parsedErrorMessage + ' ' + errorMessage));
   }
 
@@ -101,5 +110,14 @@ export class RestService {
         this.router.navigate(['/']);
       }
     });
+  }
+
+  guardar(log: Log): Observable<Log> {
+    return this.post<Log>('logs', log);
+  }
+
+  guardarLog(operador: string, movimiento: string) {
+    const nuevoLog = new Log({ operador: operador, movimiento: movimiento });
+    this.guardar(nuevoLog).subscribe(() => { });
   }
 }

@@ -9,7 +9,7 @@
             <!-- Categoría con búsqueda -->
             <mat-form-field appearance="outline">
                 <mat-label>Categoría</mat-label>
-                <input type="text" matInput formControlName="categoria" [matAutocomplete]="autoCategoria" placeholder="Buscar categoría...">
+                <input type="text" matInput formControlName="categoria" [matAutocomplete]="autoCategoria" placeholder="Buscar Categoría...">
                 <mat-autocomplete #autoCategoria="matAutocomplete" [displayWith]="displayCategoria" (optionSelected)="onCategoriaChange($event)">
                 <mat-option *ngFor="let categoria of filteredCategorias | async" [value]="categoria">
                     {{ categoria.nombre }}
@@ -20,7 +20,7 @@
             <!-- Producto con búsqueda -->
             <mat-form-field appearance="outline">
                 <mat-label>Producto</mat-label>
-                <input type="text" matInput formControlName="producto" [matAutocomplete]="autoProducto" placeholder="Buscar producto...">
+                <input type="text" matInput formControlName="producto" [matAutocomplete]="autoProducto" placeholder="Buscar Producto...">
                 <mat-autocomplete #autoProducto="matAutocomplete" [displayWith]="displayProducto" (optionSelected)="onProductoChange($event)">
                 <mat-option *ngFor="let producto of filteredProductos | async" [value]="producto">
                     {{ producto.nombre }}

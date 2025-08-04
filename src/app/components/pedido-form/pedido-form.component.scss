@@ -188,21 +188,56 @@ button[mat-raised-button]:hover:not(:disabled) {
     color: black;
   }
   &.estado-presupuesto {
-    color: #5bc0de; // azul claro
+    color: #5bc0de;
   }
   &.estado-despacho {
-    color: #007bff; // azul
+    color: #007bff;
   }
   &.estado-rechazado {
-    color: #dc3545; // rojo
+    color: #dc3545;
   }
   &.estado-orden-compra {
-    color: #ff6666; // rojo claro
+    color: #ff6666;
   }
   &.estado-facturada {
-    color: #28a74599; // verde claro
+    color: #28a74599;
   }
   &.estado-pagado {
+    color: #28a745;
+  }
+
+  // Nuevos estilos para estados internos
+  &.estado-interno-pendiente {
+    color: #6c757d; // gris
+  }
+  &.estado-interno-panol {
+    color: #17a2b8; // celeste
+  }
+  &.estado-interno-hacienda {
+    color: #ffc107; // amarillo
+  }
+  &.estado-interno-entrega {
     color: #28a745; // verde
   }
+  &.estado-interno-sinstock {
+    color: #dc3545; // rojo
+  }
+  &.estado-interno-archivado {
+    color: #363d41; // gris oscuro
+  }
+  &.estado-interno-archivado-entregado {
+    color: #20c997; // verde azulado
+  }
+}
+
+.mensaje-vacio {
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+  color: #666;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
 }
