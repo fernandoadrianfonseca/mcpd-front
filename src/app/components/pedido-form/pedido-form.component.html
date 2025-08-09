@@ -374,7 +374,7 @@
         <tr mat-row *matRowDef="let row; columns: pedidosDisplayedColumns;"></tr>
       </table>
 
-      <div *ngIf="pedidosDataSource?.data?.length === 0" class="mensaje-vacio">
+      <div *ngIf="pedidosDataSource?.data?.length === 0 && modo == 'patrimonio'" class="mensaje-vacio">
         <mat-icon>info</mat-icon>
         <span>Sin Pedidos Internos Pendientes Con Stock Disponible</span>
       </div>
