@@ -69,13 +69,14 @@ export class MainComponent implements OnInit, OnDestroy {
         label: 'Patrimonio',
         icon: 'business',
         position: 70,
-        dependenciasPermitidas: ['Informatica'],
+        dependenciasPermitidas: ['Informatica', 'Patrimonio'],
         subItems: [
           {
             label: 'Categorías',
             icon: 'view_list',
             ruta: 'categoria',
             component: CategoriaFormComponent,
+            dependenciasPermitidas: ['Informatica', 'Patrimonio'],
             data: { empleadoLogueado: this.usuario }
           },
           {
@@ -83,6 +84,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'category',
             ruta: 'producto',
             component: ProductoFormComponent,
+            dependenciasPermitidas: ['Informatica', 'Patrimonio'],
             data: { empleadoLogueado: this.usuario }
           },
           {
@@ -90,6 +92,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'inventory',
             ruta: 'stock',
             component: StockFormComponent,
+            dependenciasPermitidas: ['Informatica', 'Patrimonio'],
             data: { empleadoLogueado: this.usuario }
           },
           {
@@ -97,6 +100,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'supervisor_account',
             ruta: 'empleado',
             component: EmpleadoFormComponent,
+            dependenciasPermitidas: ['Informatica', 'Patrimonio'],
             data: { modoCustodia: true, empleadoLogueado: this.usuario }
           },
           {
@@ -104,6 +108,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'assignment',
             ruta: 'pedido',
             component: PedidoFormComponent,
+            dependenciasPermitidas: ['Informatica'],
             data: { modo: 'patrimonio', empleadoLogueado: this.usuario }
           }
         ]
@@ -119,6 +124,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'note_add',
             ruta: 'pedido',
             component: PedidoFormComponent,
+            dependenciasPermitidas: ['Informatica'],
             data: { modo: 'nuevo', empleadoLogueado: this.usuario }
           },
           {
@@ -126,6 +132,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'list',
             ruta: 'pedido-listado',
             component: PedidoFormComponent,
+            dependenciasPermitidas: ['Informatica'],
             data: { modo: 'listado', empleadoLogueado: this.usuario }
           },
           {
@@ -133,6 +140,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'edit_note',
             ruta: 'pedido-edicion',
             component: PedidoFormComponent,
+            dependenciasPermitidas: ['Informatica'],
             data: { modo: 'edicion', empleadoLogueado: this.usuario }
           }
         ]
@@ -148,6 +156,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'badge',
             ruta: 'empleado',
             component: EmpleadoFormComponent,
+            dependenciasPermitidas: ['Informatica'],
             data: { empleadoLogueado: this.usuario }
           },
           {
@@ -155,6 +164,7 @@ export class MainComponent implements OnInit, OnDestroy {
             icon: 'account_balance',
             ruta: 'contribuyente',
             component: ContribuyenteFormComponent as any,
+            dependenciasPermitidas: ['Informatica'],
             data: { empleadoLogueado: this.usuario }
           }
         ]

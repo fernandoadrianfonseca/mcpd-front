@@ -23,6 +23,7 @@
               <mat-menu #menu="matMenu" [xPosition]="'after'" [yPosition]="'above'" [overlapTrigger]="false">
                 <ng-container *ngFor="let subItem of item.subItems">
                   <button
+                    *ngIf="canView(subItem)"
                     mat-menu-item
                     (click)="selectComponent(subItem.component, subItem.data)"
                   >
