@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common'; 
 import { AuthService } from '../../services/rest/auth/auth.service';
-import { Usuario } from '../../models/usuario.model';
+import { AuthResponse, Usuario } from '../../models/usuario.model';
 import { MaterialModule } from '../../modules/material/material.module';
 import { CambiarPasswordDialogComponent } from '../cambiar-password-dialog/cambiar-password-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
@@ -33,9 +33,9 @@ export class LoginComponent {
       const { username, password } = this.loginForm.value;
 
       this.authService.login(username, password).subscribe({
-        next: (usuario: Usuario) => {
-          console.log('Autenticado:', usuario);
-          this.authService.saveLogin(usuario);
+        next: (auth: AuthResponse) => {
+          console.log('Autenticado:', auth.usuario);
+          this.authService.saveLogin(auth.usuario);
           this.router.navigate(['/main']);
         },
         error: (err) => {

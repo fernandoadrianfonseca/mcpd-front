@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
-import { Usuario } from '../../../models/usuario.model';
+import { Observable, tap } from 'rxjs';
+import { AuthResponse, Usuario } from '../../../models/usuario.model';
 import { RestService } from '../rest.service';
 import { HttpHeaders, HttpParams } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -17,6 +17,8 @@ export class AuthService {
   private currentSessionId: string | null = null;
   private currentUser: string | null = null;
   private isDevelopment : boolean = false;
+  private tokenCheckTimer: any = null;
+  private readonly TOKEN_CHECK_MS = 60_000; // 1 minuto
 
   constructor(private restService: RestService,
               private router: Router,
@@ -50,16 +52,16 @@ export class AuthService {
     });
   }
 
-  login(usuario: string, password: string): Observable<Usuario> {
+  login(usuario: string, password: string): Observable<AuthResponse> {
     const body = new HttpParams()
       .set('usuario', usuario)
       .set('password', password);
 
-    return this.restService.post<Usuario>(this.endpoint,
+    return this.restService.post<AuthResponse>(this.endpoint,
                                           body.toString(),
                                           {headers: new HttpHeaders({ 'Content-Type': 'application/x-www-form-urlencoded'})},
-                                          true);
-  }
+                                          true).pipe(tap(resp => {localStorage.setItem('token', resp.token);this.startTokenWatcher();}))
+  };
 
   /** ✅ Guardar sesión */
   saveLogin(usuario: any) {
@@ -81,8 +83,13 @@ export class AuthService {
 
   clean(){
     localStorage.removeItem('usuario');
+    localStorage.removeItem('token');
     localStorage.removeItem(this.sessionKey);
     this.currentSessionId = null;
+    if (this.tokenCheckTimer) {
+      clearInterval(this.tokenCheckTimer);
+      this.tokenCheckTimer = null;
+    }
   }
 
   initUnloadListener() {
@@ -111,6 +118,68 @@ export class AuthService {
   /** ✅ Generar un identificador único de sesión */
   private generateSessionId(): string {
     return Math.random().toString(36).substring(2);
+  }
+
+  private getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  // Decodifica el payload del JWT (base64url) sin librerías
+  private decodeJwtPayload<T = any>(token: string): T | null {
+    try {
+      const payload = token.split('.')[1];
+      if (!payload) return null;
+      const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+      const json = decodeURIComponent(
+        atob(base64)
+          .split('')
+          .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  // Devuelve true si el token está vencido o es inválido
+  private isTokenExpired(token: string): boolean {
+    const payload = this.decodeJwtPayload<{ exp?: number }>(token);
+    if (!payload || !payload.exp) return true;
+    const nowSec = Math.floor(Date.now() / 1000);
+    return nowSec >= payload.exp;
+  }
+
+  private startTokenWatcher(): void {
+    // Limpio timer previo si existiera
+    if (this.tokenCheckTimer) {
+      clearInterval(this.tokenCheckTimer);
+    }
+
+    const check = () => {
+      const token = this.getToken();
+      if (!token) return; // no hay sesión, no hago nada
+      if (this.isTokenExpired(token)) {
+        // sesión expirada
+        this.clean();
+        this.showErrorMessage('Sesión expirada. Por favor, volvé a iniciar sesión.', 6);
+        // Evitá loop de navegación si ya estás en /
+        if (this.router.url !== '/') {
+          this.router.navigate(['/']);
+        }
+      }
+    };
+
+    // Chequeo inmediato al iniciar
+    check();
+
+    // Chequeo cada 1 minuto
+    this.tokenCheckTimer = setInterval(check, this.TOKEN_CHECK_MS);
+
+    // (Opcional) Si la pestaña vuelve a estar visible, re-chequear
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check();
+    });
   }
 
   showSuccessMessage(message: string, duration: number){

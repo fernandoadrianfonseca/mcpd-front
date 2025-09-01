@@ -10,4 +10,13 @@ export class Usuario {
     constructor(init?: Partial<Usuario>) {
       Object.assign(this, init);
     }
+}
+
+export class AuthResponse  {
+  token!: string;
+  usuario!: Usuario;
+
+  constructor(init?: Partial<AuthResponse>) {
+      Object.assign(this, init);
   }
+}
