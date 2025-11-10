@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild, AfterViewInit, Inject } from '@angular/core';
+import { Component, OnInit, ViewChild, AfterViewInit, Inject, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule, AbstractControl, FormControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { DynamicFormDialogComponent } from '../../components/dynamic-form-dialog/dynamic-form-dialog.component';
@@ -31,7 +31,7 @@ export interface StockParaOperar {
   stock: ProductosStock;
   cantidad: number;
   observaciones: string | null | undefined;
-  numerosDeSerie?: [];
+  ids?: number[];
 }
 
 export const MY_DATE_FORMATS = {
@@ -115,10 +115,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
     this.displayedColumnsAsignacion = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'consumible', 'conDevolucion', 'observaciones', 'accionesAsignar'];
     this.displayedColumns = this.modoCustodia
-              ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'detalles', 'numeroDeSerie']
+              ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'movimientos', 'listado']
               : this.modoAsignar || this.modoQuitar || this.modoTransferir
                 ? ['categoriaNombre', 'productoNombre', 'detalle', 'cantidadDisponible', 'cantidadCustodia', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'accionesAgregar']
-                : ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'numeroDeSerie', 'detalles', 'custodia', 'acciones'];
+                : ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'tipo', 'marca', 'modelo', 'consumible', 'conDevolucion', 'listado', 'movimientos', 'custodia', 'acciones'];
 
     this.stockForm = this.fb.group({
       categoria: ['', Validators.required],
@@ -397,7 +397,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
             : this.stockService.getStock();
   
     stockObservable.subscribe(data => {
-      if((this.modoCustodia || this.modoQuitar) && this.legajoCustodia !== null){
+      if((this.modoTransferir || this.modoCustodia || this.modoQuitar) && this.legajoCustodia !== null){
         data=data.filter(stock=>stock.consumible==false);
       }
       this.stockItems = data;
@@ -423,7 +423,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   /** ✅ Cargar datos en el formulario para edición */
-  editarStock(stock: ProductosStock): void {
+  editarItem(stock: ProductosStock): void {
+
+    this.scrollArriba();
+
     this.stockEditando = stock;
   
     // Buscar la categoría en la lista
@@ -456,7 +459,16 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
     // ✅ **Habilitar el campo producto**
     this.stockForm.controls['producto'].enable();
+  }
 
+  scrollArriba(): void {
+    
+    const content = document.querySelector('.mat-sidenav-content');
+    if (content) {
+      content.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   /** ✅ Cancelar edición */
@@ -500,13 +512,12 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         fields: [
           { name: 'cantidad', label: `Cantidad a ${tituloAccion}`, type: 'number', required: true },
           { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-          { name: 'numerosDeSerie',
-            label: 'Números de Serie',
-            type: 'serie-selector',
-            required: false,
-            stockId: stock.id,
-            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar',
-            legajoEmpleado: this.menuData.empleado.legajo }
+          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false,stockId: stock.id,
+            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo },
+          { name: 'codigo', label: 'Codigos', type: 'serie-selector', required: false, stockId: stock.id, 
+            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo },
+          { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'serie-selector', required: false, stockId: stock.id,
+            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo }
         ]
       }
     });
@@ -561,12 +572,23 @@ export class StockFormComponent implements OnInit, AfterViewInit {
             return;
           }
         }
+
+        const idsSeleccionados = [
+          ...(result.numeroDeSerie ?? []),
+          ...(result.codigo ?? []),
+          ...(result.codigoAntiguo ?? [])
+        ]
+          .map((item: any) => Number(item.value ?? item.id))
+          .filter((v: any) => !isNaN(v));
+
+        // ✅ Quitar duplicados
+        const idsUnicos = Array.from(new Set(idsSeleccionados));
   
         const stockAsignado: StockParaOperar = {
           stock: stock,
           cantidad: cantidadIngresada,
           observaciones: result.observaciones?.trim() || null,
-          numerosDeSerie: result.numerosDeSerie ?? []
+          ids: idsUnicos ?? []
         };
   
         this.stockParaOperar.push(stockAsignado);
@@ -606,21 +628,26 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       fechaDevolucion: fechaDevolucion
     }));
 
-    const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
-      stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
-    );
+    // ✅ Unificar todos los IDs seleccionados en las operaciones
+    const idsSeleccionados: number[] = this.stockParaOperar.flatMap(stock => stock.ids ?? []);
 
-    // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
-    if (numerosDeSerie.length > 0) {
-      console.log('Números de Serie que se van a enviar:', numerosDeSerie);
-      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajoCustodia).subscribe({
+    // ✅ Quitar duplicados
+    const idsUnicos = Array.from(new Set(idsSeleccionados));
+
+    // ✅ Si hay IDs, asignarlos al legajo
+    if (idsUnicos.length > 0) {
+      console.log('IDs que se van a enviar:', idsUnicos);
+      this.stockService.asignarCustodiaProductos(idsUnicos, legajoCustodia).subscribe({
         next: () => {
-          this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
-          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Números de Serie Asignados ' + JSON.stringify(numerosDeSerie) + ' ' + legajoCustodia);
+          this.stockService.showSuccessMessage('IDs Asignados Correctamente', 5);
+          this.utils.guardarLog(
+            this.menuData?.empleadoLogueado?.nombre,
+            'IDs Asignados ' + JSON.stringify(idsUnicos) + ' ' + legajoCustodia
+          );
         },
         error: (error) => {
-          console.error('Error al asignar números de serie:', error);
-          this.stockService.showErrorMessage('Error al asignar los números de serie', 5);
+          console.error('Error al asignar IDs:', error);
+          this.stockService.showErrorMessage('Error al asignar los IDs', 5);
         }
       });
     }
@@ -722,21 +749,26 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       observaciones: stock.observaciones ?? undefined
     }));
 
-    const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
-      stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
-    );
+    // ✅ Unificar todos los IDs seleccionados en las operaciones
+    const idsSeleccionados: number[] = this.stockParaOperar.flatMap(stock => stock.ids ?? []);
 
-    // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
-    if (numerosDeSerie.length > 0) {
-      console.log('Números de Serie que se van a enviar:', numerosDeSerie);
-      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie).subscribe({
+    // ✅ Quitar duplicados
+    const idsUnicos = Array.from(new Set(idsSeleccionados));
+
+    // ✅ Si hay IDs, quitarlos de custodia
+    if (idsUnicos.length > 0) {
+      console.log('IDs que se van a quitar de custodia:', idsUnicos);
+      this.stockService.asignarCustodiaProductos(idsUnicos).subscribe({
         next: () => {
-          this.stockService.showSuccessMessage('Números de Serie Quitados De Custodia Correctamente', 5);
-          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Números de Serie Quitados De Custodia ' + JSON.stringify(numerosDeSerie));
+          this.stockService.showSuccessMessage('IDs Quitados De Custodia Correctamente', 5);
+          this.utils.guardarLog(
+            this.menuData?.empleadoLogueado?.nombre,
+            'IDs Quitados De Custodia ' + JSON.stringify(idsUnicos)
+          );
         },
         error: (error) => {
-          console.error('Error al asignar números de serie:', error);
-          this.stockService.showErrorMessage('Error Al Quitar De Custodia Los Números De Serie', 5);
+          console.error('Error al quitar IDs de custodia:', error);
+          this.stockService.showErrorMessage('Error Al Quitar De Custodia Los IDs', 5);
         }
       });
     }
@@ -798,21 +830,26 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       observaciones: stock.observaciones ?? undefined
     }));
 
-    const numerosDeSerie: number[] = this.stockParaOperar.flatMap(stock =>
-      stock.numerosDeSerie ? stock.numerosDeSerie.map((serie: any) => serie.value) : []
-    );
+    // ✅ Unificar todos los IDs seleccionados en las operaciones
+    const idsSeleccionados: number[] = this.stockParaOperar.flatMap(stock => stock.ids ?? []);
 
-    // ✅ 2️⃣ Si hay números de serie, asignarlos al legajo
-    if (numerosDeSerie.length > 0) {
-      console.log('Números de Serie que se van a enviar:', numerosDeSerie);
-      this.stockService.asignarCustodiaNumerosDeSerie(numerosDeSerie, legajoDestino).subscribe({
+    // ✅ Quitar duplicados
+    const idsUnicos = Array.from(new Set(idsSeleccionados));
+
+    // ✅ Si hay IDs, asignarlos al legajo destino
+    if (idsUnicos.length > 0) {
+      console.log('IDs que se van a transferir:', idsUnicos);
+      this.stockService.asignarCustodiaProductos(idsUnicos, legajoDestino).subscribe({
         next: () => {
-          this.stockService.showSuccessMessage('Números de Serie Asignados Correctamente', 5);
-          this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Numeros de Serie Asignados ' + JSON.stringify(numerosDeSerie) + ' ' + legajoDestino);
+          this.stockService.showSuccessMessage('IDs Transferidos Correctamente', 5);
+          this.utils.guardarLog(
+            this.menuData?.empleadoLogueado?.nombre,
+            'IDs Transferidos ' + JSON.stringify(idsUnicos) + ' ' + legajoDestino
+          );
         },
         error: (error) => {
-          console.error('Error al asignar números de serie:', error);
-          this.stockService.showErrorMessage('Error al asignar los números de serie', 5);
+          console.error('Error al transferir IDs:', error);
+          this.stockService.showErrorMessage('Error al transferir los IDs', 5);
         }
       });
     }
@@ -843,81 +880,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       });
     }
   }
-
-  /*generarReporteAsignacion(stockAsignado: StockParaOperar[], nombreReporte: string, fechaDevolucion?: Date | null): void {
-
-    let cantidadCopias=1;
-    const generaReporteLegajo = this.menuData?.empleadoLogueado?.legajo;
-    const generaReporteNombre = this.menuData?.empleadoLogueado?.nombre;
-    const legajoSeleccionadoLista = this.menuData?.empleado?.legajo;
-    const nombreSeleccionadoLista = this.menuData?.empleado?.nombre;
-    const legajoLogueado = this.menuData?.empleadoLogueado?.legajo;
-    const nombreLogueado = this.menuData?.empleadoLogueado?.nombre;
-    const dependenciaSeleccionada = this.dependenciaControl.value;
   
-    const datos = stockAsignado.map(item => ({
-      cantidad: item.cantidad,
-      descripcion: [item.stock.productoNombre, item.stock.marca, item.stock.detalle]
-                    .filter(part => part?.trim?.()).join(' '),
-      oc: '0',
-      remito: '0'
-    }));
-  
-    let parametros: any = {};
-  
-    // Si el reporte es de entrega, agregamos los parámetros de entrega
-    if (nombreReporte === 'acta-alta-patrimonial' 
-              || nombreReporte === 'acta-entrega-patrimonial' 
-                    || nombreReporte === 'acta-baja-patrimonial'
-                        || nombreReporte === 'acta-alta-patrimonial-confecha') {
-      parametros.nombreEmpleado = nombreSeleccionadoLista;
-      parametros.legajoEmpleado = String(legajoSeleccionadoLista);
-      parametros.nombreEmpleadoEntrega = nombreLogueado;
-      parametros.legajoEmpleadoEntrega = String(legajoLogueado);
-      parametros.nombreEmpleadoRecibe = nombreLogueado;
-      parametros.legajoEmpleadoRecibe = String(legajoLogueado);
-      parametros.dependenciaAutoriza = dependenciaSeleccionada;
-    }
-
-    if (nombreReporte === 'acta-entrega-patrimonial') {
-      cantidadCopias=2;
-    }
-
-    if (nombreReporte === 'acta-transferencia-patrimonial') {
-      parametros.legajoEmpleado = String(legajoLogueado);
-      parametros.legajoEmpleadoEntrega = String(legajoSeleccionadoLista);
-      parametros.legajoEmpleadoRecibe = String(this.empleadoSeleccionado.legajo);
-      parametros.nombreEmpleado = nombreLogueado;
-      parametros.nombreEmpleadoEntrega = nombreSeleccionadoLista;
-      parametros.nombreEmpleadoRecibe = this.empleadoSeleccionado.nombre;
-    }
-
-    if (nombreReporte === 'acta-alta-patrimonial-confecha') {
-      parametros.fechaDevolucion = fechaDevolucion;
-    }
-  
-    const requestDto = {
-      nombreReporte,
-      generaReporteLegajo,
-      generaReporteNombre,
-      cantidadCopias,
-      parametros,
-      datos
-    };
-  
-    this.reporteService.generarReporteConLista(requestDto).subscribe(blob => {
-      const url = window.URL.createObjectURL(blob);
-      window.open(url);
-    });
-  }*/
-  
-  //download
-  /*const a = document.createElement('a');
-  a.href = url;
-  a.download = 'acta-alta-patrimonial.pdf';
-  a.click();
-  window.URL.revokeObjectURL(url);*/
-
   eliminar(stock: StockParaOperar): void {
     this.stockParaOperar = this.stockParaOperar.filter(s => s.stock.id !== stock.stock.id);
     this.stockParaOperarDS.data = [...this.stockParaOperar];
@@ -990,8 +953,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         fields: [
           { name: 'cantidad', label: 'Cantidad', type: 'number', required: true },
           { name: 'remito', label: 'Remito', type: 'text', required: false },
-          { name: 'numeroDeSerie', label: 'Número de Serie', type: 'text', required: false, multiple: true },
-          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false }
+          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'text', required: false, multiple: true },
+          { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'text', required: false, multiple: true }
         ]
       }
     });
@@ -1024,31 +988,44 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           };
   
           this.stockService.crearFlujoDeStock(flujo).subscribe(flujoCreado => {
-            
-            const numeros = result.numeroDeSerie instanceof Array
+            const cantidad = +result.cantidad;
+            const numerosDeSerie = (result.numeroDeSerie instanceof Array)
               ? result.numeroDeSerie.filter((n: string) => n && n.trim() !== '')
               : [];
-  
-            // 3. Si hay números de serie, los registramos
-            if (numeros.length) {
-              const registros = numeros.map((numero: string) => ({
-                productoFlujo: { id: flujoCreado.id },
-                numeroDeSerie: numero.trim(),
-                empleadoCustodia: null // o legajo si aplica
-              }));
-  
-              this.stockService.crearNumerosDeSerie(registros).subscribe(() => {
-                this.stockService.showSuccessMessage('Stock Agregado y Números de Serie Registrados', 5);
-                this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Agregado y Números de Serie Registrados '
-                                                                                                          + JSON.stringify(flujo) + ' ' + JSON.stringify(numeros));
-                this.loadStock();
-              });
-  
-            } else {
-              this.stockService.showSuccessMessage('Stock Agregado', 5);
-              this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Agregado ' + JSON.stringify(flujo));
+
+            const codigosAntiguos = (result.codigoAntiguo instanceof Array)
+              ? result.codigoAntiguo.filter((n: string) => n && n.trim() !== '')
+              : [];
+
+            const registros = Array.from({ length: cantidad }, (_, index) => ({
+              productoFlujo: { id: flujoCreado.id },
+              numeroDeSerie: index < numerosDeSerie.length ? numerosDeSerie[index].trim() : null,
+              codigoAntiguo: index < codigosAntiguos.length ? codigosAntiguos[index].trim() : null,
+              empleadoCustodia: null
+            }));
+
+            this.stockService.crearInformacionProductos(registros).subscribe(() => {
+              const mensaje = numerosDeSerie.length
+                ? `Stock Agregado (${cantidad} unidades, ${numerosDeSerie.length} con N° de Serie)`
+                : `Stock Agregado (${cantidad} unidades sin N° de Serie)`;
+
+              this.stockService.showSuccessMessage(mensaje, 5);
+              this.utils.guardarLog(
+                this.menuData?.empleadoLogueado?.nombre,
+                `${mensaje} ${JSON.stringify(flujo)} ${JSON.stringify(numerosDeSerie)} ${JSON.stringify(codigosAntiguos)}`
+              );
               this.loadStock();
-            }
+            },
+            (err) => {
+              console.error('Error al crear información del producto:', err);
+              const mensajeError =
+                err?.error?.message ||
+                err?.error ||
+                err ||
+                'Ocurrió un error al agregar el stock.';
+
+              this.stockService.showErrorMessage(mensajeError, 6);
+            });
           });
         });
       }
@@ -1056,6 +1033,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   abrirModalBajaStock(stock: ProductosStock): void {
+
     const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
       width: '820px',
       data: {
@@ -1064,7 +1042,9 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
           { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
           { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
+          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' },
+          { name: 'codigo', label: 'Codigos', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' },
+          { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
         ]
       }
     });
@@ -1094,12 +1074,30 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           return;
         }
 
-        const numerosSeleccionados: number[] = result.numeroDeSerie instanceof Array
-          ? result.numeroDeSerie.map((n: any) => n.value)
+        // --- Reemplazar desde aquí ---
+        const seriesSeleccionadas: number[] = Array.isArray(result.numeroDeSerie)
+          ? result.numeroDeSerie.map((n: any) => Number(n.value))
           : [];
 
-        if (numerosSeleccionados.length > cantidadBaja) {
-          this.mostrarDialogoOk('La Cantidad De Números De Serie Seleccionados Supera La Cantidad A Dar De Baja.', {
+        const codigosSeleccionados: number[] = Array.isArray(result.codigo)
+          ? result.codigo.map((n: any) => Number(n.value))
+          : [];
+
+        const codigosAntiguosSeleccionados: number[] = Array.isArray(result.codigoAntiguo)
+          ? result.codigoAntiguo.map((n: any) => Number(n.value))
+          : [];
+
+        // Unir y quedarnos sólo con los ids únicos (si el mismo registro fue seleccionado por serie y por código antiguo)
+        const uniqueIdsSet = new Set<number>([
+          ...seriesSeleccionadas,
+          ...codigosSeleccionados,
+          ...codigosAntiguosSeleccionados
+        ]);
+        const uniqueSelectedIds = Array.from(uniqueIdsSet);
+
+        // VALIDACIÓN: la cantidad de ítems únicos seleccionados no puede superar la cantidad a dar de baja
+        if (uniqueSelectedIds.length > cantidadBaja) {
+          this.mostrarDialogoOk('La Cantidad De Ítems Seleccionados Supera La Cantidad A Dar De Baja.', {
             icono: 'error_outline',
             colorIcono: '#d32f2f',
             titulo: '¡Error De Validación!'
@@ -1129,11 +1127,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
           this.stockService.crearFlujoDeStock(flujo).subscribe(() => {
 
-            if (numerosSeleccionados.length > 0) {
-              this.stockService.darDeBajaNumerosDeSerie(numerosSeleccionados).subscribe(() => {
-                this.stockService.showSuccessMessage('Baja De Stock y Números De Serie Dados De Baja', 5);
-                this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Baja De Stock y Números De Serie Dados De Baja ' 
-                                                                                      + JSON.stringify(flujo) + ' ' + JSON.stringify(numerosSeleccionados));
+            if (uniqueSelectedIds.length > 0) {
+              this.stockService.darDeBajaProductos(uniqueSelectedIds).subscribe(() => {
+                this.stockService.showSuccessMessage('Baja de stock y números de serie realizada correctamente', 5);
+                this.utils.guardarLog(
+                  this.menuData?.empleadoLogueado?.nombre,
+                  'Baja De Stock y Números/Códigos Dados De Baja ' + JSON.stringify(flujo) + ' ' + JSON.stringify(uniqueSelectedIds)
+                );
                 this.loadStock();
               });
             } else {
@@ -1147,7 +1147,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
 
-  verDetalles(stock: ProductosStock): void {
+  verMovimientos(stock: ProductosStock): void {
 
     const legajoCustodia = this.legajoCustodia ?? undefined;
     this.stockService.getAltasYBajasPorStock(stock.id!, legajoCustodia).subscribe(flujos => {
@@ -1170,6 +1170,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   
       this.dialog.open(ListadoDialogComponent, {
         width: '1300px',
+        autoFocus: false,
+        restoreFocus: false,
         data: {
           title: title,
           columns: ['tipo', 'remito','total', 'cantidad', 'fecha', 'empleadoCustodia', 'totalLegajoCustodia', 'empleadoCarga', 'observaciones'],
@@ -1191,18 +1193,32 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
   
-  verNumerosDeSerie(stock: ProductosStock, options?: { activo?: boolean, empleadoCustodia?: number }): void {
-    this.stockService.getNumerosDeSeriePorStock(stock.id!, options).subscribe(numeros => {
+  verListado(stock: ProductosStock, options?: { activo?: boolean, empleadoCustodia?: number }): void {
+    this.stockService.getInformacionProductoEnStock(stock.id!, options).subscribe(numeros => {
+
+      const rows = numeros.map(numero => ({
+        codigo: numero.codigo ? numero.codigo : '-',
+        codigoAntiguo: numero.codigoAntiguo ? numero.codigoAntiguo : '-',
+        numeroDeSerie : numero.numeroDeSerie ? numero.numeroDeSerie : '-',
+        empleadoCustodia: {
+          legajo: numero.empleadoCustodia?.legajo || '-'
+        }
+      }));
+
       this.dialog.open(ListadoDialogComponent, {
         width: '1300px',
+        autoFocus: false,
+        restoreFocus: false,
         data: {
-          title: `Números de Serie del Stock ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
-          columns: ['numeroDeSerie', 'empleadoCustodia.legajo'],
+          title: `Listado De Stock De ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
+          columns: ['codigo', 'codigoAntiguo', 'numeroDeSerie', 'empleadoCustodia.legajo'],
           columnNames: {
+            codigo: 'Codigo',
+            codigoAntiguo: 'Codigo Antiguo',
             numeroDeSerie: 'Número de Serie',
             'empleadoCustodia.legajo': 'Custodia Legajo'
           },
-          rows: numeros
+          rows: rows
         }
       });
     });
@@ -1212,6 +1228,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     this.stockService.getCustodiasActivasPorStock(stock.id!).subscribe(custodias => {
       this.dialog.open(ListadoDialogComponent, {
         width: '1300px',
+        autoFocus: false,
+        restoreFocus: false,
         data: {
           title: `Custodias Activas de ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
           columns: ['empleadoCustodia', 'totalLegajoCustodia'],

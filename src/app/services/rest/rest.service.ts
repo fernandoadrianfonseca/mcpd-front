@@ -63,8 +63,11 @@ export class RestService {
     } else {
       // Error del servidor
       errorMessage = `Error ${error.status}: ${error.message}`;
-      if (error.error && error.error.message) {
+      if (error.error.message) {
         errorMessage += ` - ${error.error.message}`;
+      }
+      if (error.error) {
+        errorMessage += ` - ${error.error}`;
       }
     }
 
@@ -74,6 +77,9 @@ export class RestService {
     switch (error.status) {
       case 0:
         parsedErrorMessage = 'Servidor caído. Intente más tarde.';
+        break;
+      case 400:
+        parsedErrorMessage = '';
         break;
       case 401:
         parsedErrorMessage = 'Credenciales incorrectas.';

@@ -46,6 +46,11 @@
       <tr mat-row *matRowDef="let row; columns: finalColumns"></tr>
     </table>
 
+    <div *ngIf="dataSource?.data?.length === 0" class="mensaje-vacio">
+      <mat-icon>info</mat-icon>
+      <span>No Existen Registros</span>
+    </div>
+
     <mat-paginator
       [pageSize]="20"
       [pageSizeOptions]="[20, 50, 100]"

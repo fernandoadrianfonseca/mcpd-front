@@ -29,13 +29,13 @@
               </div>
             </div>
           </div>
-          <button mat-icon-button color="primary" (click)="addField(field.name)" aria-label="Agregar">
+          <button mat-icon-button color="primary" (click)="addField(field.name)" aria-label="Agregar" class="add-btn">
             <mat-icon>add</mat-icon>
           </button>
         </ng-container>
 
-        <!-- Serie Selector -->
-        <ng-container *ngIf="field.type === 'serie-selector' && seriesDisponibles.length > 0">
+        <!-- Selector de Números de Serie -->
+        <ng-container *ngIf="field.type === 'serie-selector' && field.name === 'numeroDeSerie' && seriesDisponibles.length > 0">
           <label class="field-label">{{ field.label }}</label>
 
           <mat-form-field appearance="outline">
@@ -51,7 +51,50 @@
           <div class="series-selector-list">
             <div *ngFor="let serie of form.get(field.name)?.value" class="serie-chip">
               {{ serie.label }}
-              <mat-icon (click)="eliminarSerie(field.name, serie)">close</mat-icon>
+              <mat-icon (click)="eliminarItem(serie)">close</mat-icon>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Selector de Código -->
+        <ng-container *ngIf="field.type === 'serie-selector' && codigosDisponibles.length > 0 && field.name === 'codigo'">
+          <label class="field-label">{{ field.label }}</label>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Seleccionar Código</mat-label>
+            <mat-select [formControlName]="field.name" multiple>
+              <mat-option *ngFor="let codigo of codigosDisponibles" [value]="codigo">
+                {{ codigo.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="series-selector-list">
+            <div *ngFor="let codigo of form.get(field.name)?.value" class="serie-chip">
+              {{ codigo.label }}
+              <mat-icon (click)="eliminarItem(codigo)">close</mat-icon>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Selector de Códigos Antiguos -->
+        <ng-container *ngIf="field.type === 'serie-selector' && field.name === 'codigoAntiguo' && codigosAntiguosDisponibles.length > 0">
+          <label class="field-label">{{ field.label }}</label>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Seleccionar Códigos Antiguos</mat-label>
+            <mat-select [formControlName]="field.name" multiple>
+              <mat-option *ngFor="let codigo of codigosAntiguosDisponibles" [value]="codigo">
+                {{ codigo.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Listado de códigos seleccionados -->
+          <div class="series-selector-list">
+            <div *ngFor="let codigo of form.get(field.name)?.value" class="serie-chip">
+              {{ codigo.label }}
+              <mat-icon (click)="eliminarItem(codigo)">close</mat-icon>
             </div>
           </div>
         </ng-container>

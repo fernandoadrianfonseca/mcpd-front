@@ -63,7 +63,7 @@ export class StockService {
     this.restService.showMessage(message, 'error', duration*1000, 'top', false);
   }
   
-  getNumerosDeSeriePorStock(id: number, options?: { activo?: boolean, empleadoCustodia?: number }): Observable<any[]> {
+  getInformacionProductoEnStock(id: number, options?: { activo?: boolean, empleadoCustodia?: number }): Observable<any[]> {
     let params = new HttpParams();
   
     if (options?.activo !== undefined) {
@@ -74,25 +74,25 @@ export class StockService {
       params = params.set('empleadoCustodia', options.empleadoCustodia.toString());
     }
   
-    return this.restService.get<any[]>(`numeros-de-serie/producto-stock/${id}`, { params });
+    return this.restService.get<any[]>(`informacion/producto-stock/${id}`, { params });
   }
 
-  getNumerosDeSerieSinCustodiaPorStock(id: number): Observable<any[]> {
-    return this.restService.get<any[]>(`numeros-de-serie/producto-stock/${id}/sin-custodia`);
+  getInformacionProductoSinCustodiaEnStock(id: number): Observable<any[]> {
+    return this.restService.get<any[]>(`informacion/producto-stock/${id}/sin-custodia`);
   }
 
-  crearNumerosDeSerie(numeros: any[]): Observable<any> {
-    return this.restService.post('numeros-de-serie/lote', numeros);
+  crearInformacionProductos(informacionProductos: any[]): Observable<any> {
+    return this.restService.post('informacion/lote', informacionProductos, {}, true);
   }
 
-  darDeBajaNumerosDeSerie(ids: number[]): Observable<any> {
-    return this.restService.put('numeros-de-serie/darDeBaja', ids);
+  darDeBajaProductos(ids: number[]): Observable<any> {
+    return this.restService.put('informacion/darDeBaja', ids);
   }
 
-  asignarCustodiaNumerosDeSerie(ids: number[], legajo?: number): Observable<any> {
+  asignarCustodiaProductos(ids: number[], legajo?: number): Observable<any> {
     const url = legajo != null
-      ? `numeros-de-serie/asignar-custodia?legajo=${legajo}`
-      : `numeros-de-serie/asignar-custodia`;
+      ? `informacion/asignar-custodia?legajo=${legajo}`
+      : `informacion/asignar-custodia`;
   
     return this.restService.put<any>(url, ids);
   }

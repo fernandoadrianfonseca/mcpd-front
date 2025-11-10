@@ -60,7 +60,20 @@ export class ReporteUtilsService {
 
     this.reporteService.generarReporteConLista(requestDto).subscribe(blob => {
       const url = window.URL.createObjectURL(blob);
-      window.open(url);
+      //window.open(url);
+
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, '-')
+        .replace('T', '_')
+        .replace('Z', '');  
+
+      //download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${requestDto.nombreReporte}_${timestamp}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     });
   }
 }
