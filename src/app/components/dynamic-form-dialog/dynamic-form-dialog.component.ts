@@ -169,9 +169,21 @@ export class DynamicFormDialogComponent implements OnInit {
       }
     });
 
-    controlSeries?.setValue(nuevasSeries, { emitEvent: false });
-    controlCodigosAntiguos?.setValue(nuevosCodigosAntiguos, { emitEvent: false });
-    controlCodigos?.setValue(nuevosCodigos, { emitEvent: false });
+    // 🔹 2. Detectar y eliminar los que ya no están seleccionados
+    const idsSeleccionados = new Set(seleccionados.map(s => Number(s.value)));
+
+    const filtrar = (lista: any[]) =>
+      lista.filter(item => idsSeleccionados.has(Number(item.value)));
+
+    const nuevasSeriesFiltradas = filtrar(nuevasSeries);
+    const nuevosCodigosAntiguosFiltrados = filtrar(nuevosCodigosAntiguos);
+    const nuevosCodigosFiltrados = filtrar(nuevosCodigos);
+
+    // 🔹 3. Actualizar los controles sin eventos
+    controlSeries?.setValue(nuevasSeriesFiltradas, { emitEvent: false });
+    controlCodigosAntiguos?.setValue(nuevosCodigosAntiguosFiltrados, { emitEvent: false });
+    controlCodigos?.setValue(nuevosCodigosFiltrados, { emitEvent: false });
+
     this.cdRef.detectChanges();
   };
 
