@@ -29,6 +29,9 @@ export class MainComponent implements OnInit, OnDestroy {
   modoEdicion: boolean = false;
   modoPresupuesto: boolean = false;
   modoCustodia: boolean = false;
+  modoListadoCategoria: boolean = false;
+  modoListadoProducto: boolean = false;
+  modoGraficos: boolean = false;
   modoAsignar: boolean = false;
   modoTransferir: boolean = false;
   modoQuitar: boolean = false;
@@ -114,6 +117,30 @@ export class MainComponent implements OnInit, OnDestroy {
         ]
       },
       {
+        label: 'Inventario',
+        icon: 'inventory_2',
+        position: 120,
+        dependenciasPermitidas: ['Informatica', 'Patrimonio'],
+        subItems: [
+          {
+            label: 'Listado por Categoría',
+            icon: 'layers',
+            ruta: 'inventario-categoria',
+            component: StockFormComponent,
+            dependenciasPermitidas: ['Informatica', 'Patrimonio'],
+            data: { modoListadoCategoria: true, empleadoLogueado: this.usuario }
+          },
+          {
+            label: 'Listado por Producto',
+            icon: 'list_alt',
+            ruta: 'inventario-producto',
+            component: StockFormComponent,
+            dependenciasPermitidas: ['Informatica', 'Patrimonio'],
+            data: { modoListadoProducto: true, empleadoLogueado: this.usuario }
+          }
+        ]
+      },
+      {
         label: 'Pedidos',
         icon: 'request_quote',
         position: 100,
@@ -179,6 +206,15 @@ export class MainComponent implements OnInit, OnDestroy {
         dependenciasPermitidas: ['Informatica']
       }
     ];
+
+    this.abrirGraficos();
+  }
+
+  abrirGraficos() {
+    this.selectComponent(StockFormComponent, { 
+      modoGraficos: true, 
+      empleadoLogueado: this.usuario 
+    });
   }
 
   ngOnDestroy(): void {
@@ -204,6 +240,9 @@ export class MainComponent implements OnInit, OnDestroy {
       this.modoTransferir = this.selectedComponentData.modoTransferir ?? false;
       this.modoQuitar = this.selectedComponentData.modoQuitar ?? false;
       this.modoCustodia = this.selectedComponentData.modoCustodia ?? false;
+      this.modoListadoCategoria = this.selectedComponentData.modoListadoCategoria ?? false;
+      this.modoListadoProducto = this.selectedComponentData.modoListadoProducto ?? false;
+      this.modoGraficos = this.selectedComponentData.modoGraficos ?? false;
       const modo = this.selectedComponentData?.modo;
       this.modoNuevo = modo === 'nuevo';
       this.modoListado = modo === 'listado';
@@ -273,6 +312,9 @@ export class MainComponent implements OnInit, OnDestroy {
         if (data.modoTransferir) params.push('modo=transferir');
         if (data.modoQuitar) params.push('modo=quitar');
         if (data.modoCustodia) params.push('modo=custodia');
+        if (data.modoListadoCategoria) params.push('modo=listadoCategorias');
+        if (data.modoListadoProducto) params.push('modo=listadoProducto');
+        if (data.modoGraficos) params.push('modo=graficos');
         if (this.modoPresupuesto) params.push('modo=presupuesto');
         if (this.modoNuevo) params.push('modo=nuevo');
         if (this.modoListado) params.push('modo=listado');

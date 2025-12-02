@@ -3,6 +3,8 @@ import { Observable } from 'rxjs';
 import { RestService } from '../rest.service';
 import { ProductosStock } from '../../../models/stock.model';
 import { HttpParams } from '@angular/common/http';
+import { StockCategoria } from '../../../models/stock-categoria.model';
+import { StockProducto } from '../../../models/stock-producto.model';
 
 @Injectable({
   providedIn: 'root'
@@ -117,5 +119,13 @@ export class StockService {
 
   getPrestamosPendientesDeDevolucion(legajo: number): Observable<any[]> {
     return this.restService.get<any[]>(`stock-flujo/pendientes-devolucion?legajo=${legajo}`);
+  }
+
+  getStockPorCategoria(): Observable<StockCategoria[]> {
+    return this.restService.get<StockCategoria[]>('stock/por-categorias');
+  }
+
+  getStockPorProducto(): Observable<StockProducto[]> {
+    return this.restService.get<StockProducto[]>('stock/por-producto');
   }
 }

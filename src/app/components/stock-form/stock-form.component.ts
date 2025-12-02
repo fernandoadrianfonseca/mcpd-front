@@ -26,6 +26,19 @@ import { MAT_DATE_FORMATS, DateAdapter, MAT_DATE_LOCALE } from '@angular/materia
 import { MomentDateAdapter } from '@angular/material-moment-adapter';
 import { UtilsService } from '../../services/utils/utils.service';
 import { ReporteUtilsService } from '../../services/utils/reporte-utils.service';
+import { StockCategoria } from '../../models/stock-categoria.model';
+import { StockProducto } from '../../models/stock-producto.model';
+import { BaseChartDirective } from 'ng2-charts';
+import { ChartData, ChartOptions, ChartType } from 'chart.js';
+import {
+  Chart,
+  DoughnutController,
+  ArcElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
 export interface StockParaOperar {
   stock: ProductosStock;
@@ -50,7 +63,7 @@ export const MY_DATE_FORMATS = {
   selector: 'stock-form',
   templateUrl: './stock-form.component.html',
   styleUrls: ['./stock-form.component.scss'],
-  imports: [CommonModule, MaterialModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, MaterialModule, ReactiveFormsModule, FormsModule, BaseChartDirective],
   providers: [
     { provide: MAT_DATE_LOCALE, useValue: 'es-AR' },
     { provide: DateAdapter, useClass: MomentDateAdapter, deps: [MAT_DATE_LOCALE] },
@@ -68,6 +81,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   displayedColumnsAsignacion: string[] = [];
   dataSource = new MatTableDataSource<ProductosStock>();
   stockParaOperarDS = new MatTableDataSource<StockParaOperar>();
+  dataSourceCategoria = new MatTableDataSource<StockCategoria>();
+  dataSourceProducto = new MatTableDataSource<StockProducto>();
+  displayedColumnsCategoria: string[] = ['categoriaNombre', 'total', 'totalDisponible', 'totalCustodia'];
+  displayedColumnsProducto: string[] = ['productoNombre', 'categoriaNombre', 'total', 'totalDisponible', 'totalCustodia'];
 
   stockEditando: ProductosStock | null = null;
   filteredCategorias!: Observable<Categoria[]>;
@@ -78,17 +95,31 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   modoAsignar = false;
   modoQuitar = false;
   modoTransferir = false;
+  modoListadoCategoria = false;
+  modoListadoProducto = false;
+  modoGraficos = false;
   empleadoControl = new FormControl();
   empleadoSeleccionado: any = null;
   empleadosFiltrados: Observable<any[]> = of([]);
   dependenciaControl = new FormControl();
   fechaDevolucionControl = new FormControl(null);
   fechaMinimaDevolucion = new Date();
+  stockCategoria: StockCategoria[] = [];
   dependencias: string[] = ['PATRIMONIO','RENTAS','DESPACHO','GOBIERNO','CATASTRO','ARCHIVO','HACIENDA','CONTADURIA','RRHH','BROMATOLOGIA','INFORMATICA',
                             'PEDIDOS','RECAUDACION','OBRAS','LIQUIDACION','TESORERIA','COMPRAS'];
+  filtrosCategoria = [
+    { id: 'total', nombre: 'Total' },
+    { id: 'disponible', nombre: 'Total Disponible' },
+    { id: 'custodia', nombre: 'Total En Custodia' },
+  ];
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
+  filtroSeleccionado = 'total';
+
+  @ViewChild('paginator') paginator!: MatPaginator;
+  @ViewChild('paginatorCategoria') paginatorCategoria!: MatPaginator;
+  @ViewChild('paginatorProducto') paginatorProducto!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
+  @ViewChild(BaseChartDirective) chart?: BaseChartDirective;
 
   constructor(
     private fb: FormBuilder,
@@ -112,6 +143,17 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     this.modoAsignar = this.menuData?.modoAsignar || false;
     this.modoQuitar = this.menuData?.modoQuitar || false;
     this.modoTransferir = this.menuData?.modoTransferir || false;
+    this.modoListadoCategoria = this.menuData?.modoListadoCategoria || false;
+    this.modoListadoProducto = this.menuData?.modoListadoProducto || false;
+    this.modoGraficos = this.menuData?.modoGraficos || false;
+
+    if (this.modoListadoCategoria || this.modoGraficos) {
+      this.cargarStockPorCategoria();
+    }
+
+    if (this.modoListadoProducto || this.modoGraficos) {
+      this.cargarStockPorProducto();
+    }
 
     this.displayedColumnsAsignacion = ['categoriaNombre', 'productoNombre', 'detalle', 'cantidad', 'consumible', 'conDevolucion', 'observaciones', 'accionesAsignar'];
     this.displayedColumns = this.modoCustodia
@@ -182,8 +224,30 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.dataSource.paginator = this.paginator;
+
+    if (!this.modoListadoCategoria && !this.modoListadoProducto) {
+      this.dataSource.paginator = this.paginator;
+    }
+    
     this.onTipoCustodiaChange();
+
+    if (this.modoListadoCategoria) {
+      this.dataSourceCategoria.paginator = this.paginatorCategoria;
+    }
+
+    if (this.modoListadoProducto) {
+      this.dataSourceProducto.paginator = this.paginatorProducto;
+    }
+  }
+
+  applyFilterCategoria(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.dataSourceCategoria.filter = filterValue.trim().toLowerCase();
+  }
+
+  applyFilterProducto(event: Event) {
+    const filterValue = (event.target as HTMLInputElement).value;
+    this.dataSourceProducto.filter = filterValue.trim().toLowerCase();
   }
 
   tieneConDevolucion(): boolean {
@@ -409,7 +473,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
   loadEmpleados(): void {
     this.empleadoService.getEmpleados().subscribe(data => {
-      this.empleados = data.filter(empleado=>empleado.legajo!=this.menuData.empleado.legajo);
+      this.empleados = data.filter(empleado=>empleado.legajo!=this.menuData.empleadoLogueado.legajo);
       this.empleadosFiltrados = this.empleadoControl.valueChanges.pipe(
         startWith(''),
         map(value => typeof value === 'string' ? value : `${value.legajo} ${value.nombre}`),
@@ -1241,5 +1305,108 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         }
       });
     });
+  }
+
+  cargarStockPorCategoria(): void {
+    this.stockService.getStockPorCategoria().subscribe({
+      next: (data: StockCategoria[]) => {
+        this.stockCategoria = data;
+        this.dataSourceCategoria.data = data;
+        this.dataSourceCategoria.sort = this.sort;
+        this.cargarGraficoCategoria(data);
+      },
+      error: () => {
+        this.stockService.showErrorMessage('No se pudo cargar el stock por categoría.', 5);
+      }
+    });
+  }
+
+  cargarStockPorProducto(): void {
+    this.stockService.getStockPorProducto().subscribe({
+      next: data => {
+        this.dataSourceProducto.data = data;
+        this.dataSourceProducto.sort = this.sort;
+      },
+      error: () => this.stockService.showErrorMessage('No se pudo cargar el stock por producto.', 5)
+    });
+  }
+
+  // === PALETA PREMIUM ===
+  premiumColors: string[] = [
+    '#3E82F7', '#5CC9A7', '#FFD166', '#EF476F',
+    '#8E7CC3', '#06D6A0', '#118AB2', '#F29E4C', '#6C6CE5'
+  ];
+
+  // Tipo de gráfico (literal correcto para ng2-charts 8)
+  pieChartType: 'doughnut' = 'doughnut';
+
+  // === DATA (tipado correcto sin never[]) ===
+  pieChartData: ChartData<'doughnut', number[], string> = {
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        backgroundColor: [],
+        borderColor: '#fff',
+        borderWidth: 2,
+        hoverOffset: 12
+      }
+    ]
+  };
+
+  // === OPCIONES ===
+  pieChartOptions: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,  
+    cutout: '0%',                
+    layout: { padding: 0 },
+    plugins: {
+      legend: {
+        position: 'right',
+        labels: {
+          color: '#444',
+          font: { size: 15, family: 'Inter, Roboto, Arial' }
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(30,30,30,0.9)',
+        titleFont: { size: 14 },
+        bodyFont: { size: 13 }
+      }
+    }
+  };
+
+  cargarGraficoCategoria(data: StockCategoria[]) {
+    this.aplicarFiltroCategoria(data);
+  }
+
+  aplicarFiltroCategoria(data: StockCategoria[]) {
+    let valores: number[] = [];
+
+    switch (this.filtroSeleccionado) {
+      case 'total':
+        valores = data.map(x => Number(x.total ?? 0));
+        break;
+
+      case 'disponible':
+        valores = data.map(x => Number(x.totalDisponible ?? 0));
+        break;
+        
+      case 'custodia':
+        valores = data.map(x => Number(x.totalCustodia ?? 0));
+        break;
+    }
+
+    // Labels no cambian
+    this.pieChartData.labels = data.map(x => x.categoriaNombre);
+
+    // Actualizo dataset
+    this.pieChartData.datasets[0].data = valores;
+    this.pieChartData.datasets[0].backgroundColor =
+      this.premiumColors.slice(0, valores.length);
+
+    setTimeout(() => {
+          this.chart?.update();
+    }, 0);
   }
 }
