@@ -9,6 +9,7 @@ export class ProductosStock {
   productoNombre!: string;
   cantidad!: number;
   cantidadCustodia!: number;
+  cantidadCustodiaLegajo?: number;
   precio?: number;
   marca?: string;
   modelo?: string;

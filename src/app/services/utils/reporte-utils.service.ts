@@ -31,6 +31,11 @@ export class ReporteUtilsService {
       cantidad: item.cantidad,
       descripcion: [item.stock.productoNombre, item.stock.marca, item.stock.detalle]
                     .filter(part => part?.trim?.()).join(' '),
+      motivoBaja: item.motivoBaja ?? '-',
+      codigos: Array.isArray(item.codigos)
+              ? item.codigos.join(', ')
+              : '',
+      observaciones: item.observaciones ?? '-',
       oc: '0',
       remito: '0'
     }));

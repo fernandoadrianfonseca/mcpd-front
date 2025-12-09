@@ -5,6 +5,7 @@ import { ProductosStock } from '../../../models/stock.model';
 import { HttpParams } from '@angular/common/http';
 import { StockCategoria } from '../../../models/stock-categoria.model';
 import { StockProducto } from '../../../models/stock-producto.model';
+import { ProductosInformacion } from '../../../components/stock-form/stock-form.component';
 
 @Injectable({
   providedIn: 'root'
@@ -97,6 +98,27 @@ export class StockService {
       : `informacion/asignar-custodia`;
   
     return this.restService.put<any>(url, ids);
+  }
+
+  getCodigosLibres(stockId: number, cantidad: number, idsYaElegidos: number[]): Observable<ProductosInformacion[]> {
+    return this.restService.post<ProductosInformacion[]>(
+      `informacion/codigos-libres/${stockId}/${cantidad}`,
+      idsYaElegidos
+    );
+  }
+
+  getCodigosEnCustodia(stockId: number, cantidad: number, legajo: number, idsYaElegidos: number[]): Observable<ProductosInformacion[]> {
+    return this.restService.post<ProductosInformacion[]>(
+      `informacion/codigos-encustodia/${stockId}/${cantidad}/${legajo}`,
+      idsYaElegidos
+    );
+  }
+
+  getCodigosActivos(stockId: number, cantidad: number, idsYaElegidos: number[]): Observable<ProductosInformacion[]> {
+    return this.restService.post<ProductosInformacion[]>(
+      `informacion/codigos-activos/${stockId}/${cantidad}`,
+      idsYaElegidos
+    );
   }
 
   crearFlujoDeStock(flujo: any): Observable<any> {

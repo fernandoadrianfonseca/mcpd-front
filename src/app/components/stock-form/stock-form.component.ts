@@ -12,8 +12,8 @@ import { Producto } from '../../models/producto.model';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { MatTableDataSource } from '@angular/material/table';
 import { MatPaginator } from '@angular/material/paginator';
-import { Observable, of } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
+import { forkJoin, lastValueFrom, Observable, of, throwError } from 'rxjs';
+import { catchError, map, startWith, timeout } from 'rxjs/operators';
 import { MatSort } from '@angular/material/sort';
 import { DialogService } from '../../services/dialog/dialog.service';
 import { EmpleadoService } from '../../services/rest/empleado/empleado.service';
@@ -44,7 +44,23 @@ export interface StockParaOperar {
   stock: ProductosStock;
   cantidad: number;
   observaciones: string | null | undefined;
+  motivoBaja?: string | null | undefined;
   ids?: number[];
+  codigos?: (string | null)[];
+}
+
+export interface ProductosInformacion {
+  id: number;
+  id_producto_flujo: number;
+  codigo: string | null;
+  codigo_producto: number | null;
+  codigo_general: string | null;
+  codigo_antiguo: string | null;
+  numero_de_serie: string | null;
+  observaciones: string | null;
+  empleado_custodia: number | null;
+  activo: boolean;
+  updated: string | null;
 }
 
 export const MY_DATE_FORMATS = {
@@ -587,6 +603,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   
     dialogRef.afterClosed().subscribe(result => {
+
       if (result) {
         const cantidadIngresada = +result.cantidad;
   
@@ -622,7 +639,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         }
   
         if (this.modoQuitar || this.modoTransferir) {
-          const enCustodia = stock.cantidadCustodia;
+          const enCustodia = stock.cantidadCustodiaLegajo ?? 0;
   
           if (cantidadIngresada > enCustodia) {
             this.mostrarDialogoOk(
@@ -652,7 +669,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           stock: stock,
           cantidad: cantidadIngresada,
           observaciones: result.observaciones?.trim() || null,
-          ids: idsUnicos ?? []
+          ids: idsUnicos ?? [],
+          codigos: Array.isArray(result.codigo)
+            ? result.codigo.map((c: { label: any; }) => c.label)
+            : []
         };
   
         this.stockParaOperar.push(stockAsignado);
@@ -679,7 +699,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
 
-  asignarStockYGenerarReporte(): void {
+  async asignarStockYGenerarReporte(): Promise<void> {
     const legajoCustodia = this.menuData?.empleado?.legajo;
     const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
@@ -692,30 +712,57 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       fechaDevolucion: fechaDevolucion
     }));
 
-    // ✅ Unificar todos los IDs seleccionados en las operaciones
-    const idsSeleccionados: number[] = this.stockParaOperar.flatMap(stock => stock.ids ?? []);
+    for (const item of this.stockParaOperar) {
+      const seleccionados = item.ids ?? [];
+      const faltan = item.cantidad - seleccionados.length;
 
-    // ✅ Quitar duplicados
+      if (faltan > 0) {
+        try {
+          // Espera la respuesta ANTES de seguir
+          const respuesta = await lastValueFrom(
+            this.stockService.getCodigosLibres(
+              item.stock.id!,
+              faltan,
+              item.ids ?? []
+            )
+          );
+
+          const nuevosIds = respuesta.map(r => r.id);
+          const nuevosCodigos = respuesta.map(r => r.codigo);
+
+          item.ids = [...(item.ids ?? []), ...nuevosIds];
+          item.codigos = [...(item.codigos ?? []), ...nuevosCodigos];
+
+        } catch (err) {
+          console.error("Error obteniendo códigos libres", err);
+        }
+      }
+    }
+
+    // Recalcular ids únicos
+    const idsSeleccionados = this.stockParaOperar.flatMap(s => s.ids ?? []);
     const idsUnicos = Array.from(new Set(idsSeleccionados));
 
-    // ✅ Si hay IDs, asignarlos al legajo
     if (idsUnicos.length > 0) {
-      console.log('IDs que se van a enviar:', idsUnicos);
-      this.stockService.asignarCustodiaProductos(idsUnicos, legajoCustodia).subscribe({
-        next: () => {
-          this.stockService.showSuccessMessage('IDs Asignados Correctamente', 5);
-          this.utils.guardarLog(
-            this.menuData?.empleadoLogueado?.nombre,
-            'IDs Asignados ' + JSON.stringify(idsUnicos) + ' ' + legajoCustodia
-          );
-        },
-        error: (error) => {
-          console.error('Error al asignar IDs:', error);
-          this.stockService.showErrorMessage('Error al asignar los IDs', 5);
-        }
-      });
+      try {
+        await lastValueFrom(
+          this.stockService.asignarCustodiaProductos(idsUnicos, legajoCustodia)
+        );
+
+        this.stockService.showSuccessMessage('IDs Asignados Correctamente', 5);
+        this.utils.guardarLog(
+          this.menuData?.empleadoLogueado?.nombre,
+          'IDs Asignados ' + JSON.stringify(idsUnicos) + ' ' + legajoCustodia
+        );
+
+      } catch (error) {
+        console.error('Error al asignar IDs:', error);
+        this.stockService.showErrorMessage('Error al asignar los IDs', 5);
+        return; // ← IMPORTANTE: detener ejecución si falla
+      }
     }
-  
+
+    //OBTENER TODOS LOS IDS INCLUIDOS LOS FALTANTES Y LOS CODIGOS
     if (items.length && legajoCustodia) {
       this.stockService.asignarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
@@ -784,6 +831,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }
   }
 
+  get mostrarCustodiaLegajo(): boolean {
+    return this.dataSource?.data?.some(s => s.cantidadCustodiaLegajo != null && s.cantidadCustodiaLegajo !== undefined);
+  }
+
   confirmarQuitarCustodia(): void {
     const legajoCustodia = this.menuData?.empleado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
@@ -802,7 +853,8 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
 
-  quitarCustodiaYGenerarReporte(): void {
+  async quitarCustodiaYGenerarReporte(): Promise<void> {
+
     const legajoCustodia = this.menuData?.empleado?.legajo;
     const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
     const nombre = this.menuData?.empleado?.nombre;
@@ -813,37 +865,65 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       observaciones: stock.observaciones ?? undefined
     }));
 
-    // ✅ Unificar todos los IDs seleccionados en las operaciones
-    const idsSeleccionados: number[] = this.stockParaOperar.flatMap(stock => stock.ids ?? []);
+    for (const item of this.stockParaOperar) {
+      const seleccionados = item.ids ?? [];
+      const faltan = item.cantidad - seleccionados.length;
 
-    // ✅ Quitar duplicados
+      if (faltan > 0) {
+        try {
+          // Espera la respuesta ANTES de seguir
+          const respuesta = await lastValueFrom(
+            this.stockService.getCodigosEnCustodia(
+              item.stock.id!,
+              faltan,
+              legajoCustodia,
+              item.ids ?? []
+            )
+          );
+
+          const nuevosIds = respuesta.map(r => r.id);
+          const nuevosCodigos = respuesta.map(r => r.codigo);
+
+          item.ids = [...(item.ids ?? []), ...nuevosIds];
+          item.codigos = [...(item.codigos ?? []), ...nuevosCodigos];
+
+        } catch (err) {
+          console.error("Error obteniendo códigos libres", err);
+        }
+      }
+    }
+
+    // Recalcular ids únicos
+    const idsSeleccionados = this.stockParaOperar.flatMap(s => s.ids ?? []);
     const idsUnicos = Array.from(new Set(idsSeleccionados));
 
-    // ✅ Si hay IDs, quitarlos de custodia
     if (idsUnicos.length > 0) {
       console.log('IDs que se van a quitar de custodia:', idsUnicos);
-      this.stockService.asignarCustodiaProductos(idsUnicos).subscribe({
-        next: () => {
-          this.stockService.showSuccessMessage('IDs Quitados De Custodia Correctamente', 5);
-          this.utils.guardarLog(
-            this.menuData?.empleadoLogueado?.nombre,
-            'IDs Quitados De Custodia ' + JSON.stringify(idsUnicos)
-          );
-        },
-        error: (error) => {
-          console.error('Error al quitar IDs de custodia:', error);
-          this.stockService.showErrorMessage('Error Al Quitar De Custodia Los IDs', 5);
-        }
-      });
+      try {
+        await lastValueFrom(
+          this.stockService.asignarCustodiaProductos(idsUnicos)
+        );
+
+        this.stockService.showSuccessMessage('IDs Quitados De Custodia Correctamente', 5);
+        this.utils.guardarLog(
+          this.menuData?.empleadoLogueado?.nombre,
+          'IDs Quitados De Custodia ' + JSON.stringify(idsUnicos)
+        );
+
+      } catch (error) {
+        console.error('Error al quitar IDs de custodia:', error);
+        this.stockService.showErrorMessage('Error Al Quitar De Custodia Los IDs', 5);
+        return; // ← IMPORTANTE: detener ejecución si falla
+      }
     }
-  
+
     if (items.length && legajoCustodia) {
       this.stockService.quitarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Quitado Con Éxito', 5);
         this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Quitado ' + JSON.stringify(items) + ' ' + legajoCustodia + ' ' + legajoCarga);
   
         // Generar reporte de baja
-        this.reporteUtils.generarReporteAsignacion(this.stockParaOperar, 'acta-baja-patrimonial', {
+        this.reporteUtils.generarReporteAsignacion(this.stockParaOperar, 'acta-devolucion-patrimonial', {
           generaReporteLegajo: legajoCarga,
           generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
           legajoEmpleado: legajoCustodia,
@@ -883,7 +963,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
 
-  transferirCustodiaYGenerarReporte(): void {
+  async transferirCustodiaYGenerarReporte(): Promise<void> {
 
     const legajoDestino = this.empleadoSeleccionado.legajo;
     const legajoOrigen = this.menuData?.empleado?.legajo;
@@ -894,30 +974,57 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       observaciones: stock.observaciones ?? undefined
     }));
 
-    // ✅ Unificar todos los IDs seleccionados en las operaciones
-    const idsSeleccionados: number[] = this.stockParaOperar.flatMap(stock => stock.ids ?? []);
+    for (const item of this.stockParaOperar) {
+      const seleccionados = item.ids ?? [];
+      const faltan = item.cantidad - seleccionados.length;
 
-    // ✅ Quitar duplicados
+      if (faltan > 0) {
+        try {
+          // Espera la respuesta ANTES de seguir
+          const respuesta = await lastValueFrom(
+            this.stockService.getCodigosEnCustodia(
+              item.stock.id!,
+              faltan,
+              legajoOrigen,
+              item.ids ?? []
+            )
+          );
+
+          const nuevosIds = respuesta.map(r => r.id);
+          const nuevosCodigos = respuesta.map(r => r.codigo);
+
+          item.ids = [...(item.ids ?? []), ...nuevosIds];
+          item.codigos = [...(item.codigos ?? []), ...nuevosCodigos];
+
+        } catch (err) {
+          console.error("Error obteniendo códigos libres", err);
+        }
+      }
+    }
+
+    // Recalcular ids únicos
+    const idsSeleccionados = this.stockParaOperar.flatMap(s => s.ids ?? []);
     const idsUnicos = Array.from(new Set(idsSeleccionados));
 
-    // ✅ Si hay IDs, asignarlos al legajo destino
     if (idsUnicos.length > 0) {
-      console.log('IDs que se van a transferir:', idsUnicos);
-      this.stockService.asignarCustodiaProductos(idsUnicos, legajoDestino).subscribe({
-        next: () => {
-          this.stockService.showSuccessMessage('IDs Transferidos Correctamente', 5);
-          this.utils.guardarLog(
-            this.menuData?.empleadoLogueado?.nombre,
-            'IDs Transferidos ' + JSON.stringify(idsUnicos) + ' ' + legajoDestino
-          );
-        },
-        error: (error) => {
-          console.error('Error al transferir IDs:', error);
-          this.stockService.showErrorMessage('Error al transferir los IDs', 5);
-        }
-      });
+      try {
+        await lastValueFrom(
+          this.stockService.asignarCustodiaProductos(idsUnicos, legajoDestino)
+        );
+
+        this.stockService.showSuccessMessage('IDs Transferidos Correctamente', 5);
+        this.utils.guardarLog(
+          this.menuData?.empleadoLogueado?.nombre,
+          'IDs Transferidos ' + JSON.stringify(idsUnicos) + ' ' + legajoDestino
+        );
+
+      } catch (error) {
+        console.error('Error al transferir IDs:', error);
+        this.stockService.showErrorMessage('Error al transferir los IDs', 5);
+        return; // ← IMPORTANTE: detener ejecución si falla
+      }
     }
-  
+
     if (items.length && legajoOrigen && legajoDestino) {
       this.stockService.transferirCustodia(items, legajoOrigen, legajoDestino, legajoCarga).subscribe(() => {
         this.stockService.showSuccessMessage('Stock Transferido Con Éxito', 5);
@@ -1096,7 +1203,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     });
   }
 
-  abrirModalBajaStock(stock: ProductosStock): void {
+  async abrirModalBajaStock(stock: ProductosStock): Promise<void> {
 
     const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
       width: '820px',
@@ -1113,7 +1220,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       }
     });
 
-    dialogRef.afterClosed().subscribe(result => {
+    dialogRef.afterClosed().subscribe(async result => {
 
       if (result) {
         const cantidadBaja = +result.cantidad;
@@ -1147,6 +1254,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           ? result.codigo.map((n: any) => Number(n.value))
           : [];
 
+        const codigosSeleccionadosLabel: (string | null)[] = Array.isArray(result.codigo)
+          ? result.codigo.map((n: any) => String(n.label))
+          : [];
+
         const codigosAntiguosSeleccionados: number[] = Array.isArray(result.codigoAntiguo)
           ? result.codigoAntiguo.map((n: any) => Number(n.value))
           : [];
@@ -1157,7 +1268,11 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           ...codigosSeleccionados,
           ...codigosAntiguosSeleccionados
         ]);
-        const uniqueSelectedIds = Array.from(uniqueIdsSet);
+
+        let uniqueSelectedIds = Array.from(uniqueIdsSet);
+        let uniqueSelectedCodes = Array.from(codigosSeleccionadosLabel);
+        const legajoCarga = this.menuData?.empleadoLogueado?.legajo;
+        const nombre = this.menuData?.empleado?.nombre;
 
         // VALIDACIÓN: la cantidad de ítems únicos seleccionados no puede superar la cantidad a dar de baja
         if (uniqueSelectedIds.length > cantidadBaja) {
@@ -1169,8 +1284,29 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           return;
         }
 
-        const empleado = this.menuData?.empleadoLogueado;
-        const legajo = empleado?.legajo;
+        const faltan = cantidadBaja - uniqueSelectedIds.length;
+
+        if (faltan > 0) {
+          try {
+            const respuesta = await lastValueFrom(
+              this.stockService.getCodigosActivos(
+                stock.id!,
+                faltan,
+                uniqueSelectedIds
+              )
+            );
+
+            const nuevosIds = respuesta.map(r => r.id);
+            const nuevosCodigos = respuesta.map(r => r.codigo);
+
+            uniqueSelectedIds = [...uniqueSelectedIds, ...nuevosIds];
+            uniqueSelectedCodes = [...uniqueSelectedCodes, ...nuevosCodigos];
+
+          } catch (err) {
+            console.error("Error obteniendo códigos libres", err);
+            return;
+          }
+        }
 
         const stockActualizado: ProductosStock = {
           ...stock,
@@ -1184,7 +1320,7 @@ export class StockFormComponent implements OnInit, AfterViewInit {
             total: nuevoTotal,
             totalLegajoCustodia: 0,
             tipo: 'baja',
-            empleadoCarga: legajo,
+            empleadoCarga: legajoCarga,
             motivoBaja: result.motivoBaja?.trim(),
             observaciones: result.observaciones?.trim() || null
           };
@@ -1207,6 +1343,29 @@ export class StockFormComponent implements OnInit, AfterViewInit {
             }
           });
         });
+
+        const stockParaOperar: StockParaOperar[] = [{
+          stock: stock,
+          cantidad: cantidadBaja,
+          observaciones: result.observaciones?.trim() || null,
+          motivoBaja: result.motivoBaja?.trim() || null,
+          codigos: uniqueSelectedCodes
+        }];
+
+        // Generar reporte de baja patrimonial
+        if (stockParaOperar.length) {
+          this.reporteUtils.generarReporteAsignacion(stockParaOperar, 'acta-baja-patrimonial', {
+            generaReporteLegajo: legajoCarga,
+            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleado: legajoCarga,
+            nombreEmpleado: nombre,
+            legajoEmpleadoEntrega: legajoCarga,
+            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
+            legajoEmpleadoRecibe: legajoCarga,
+            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
+            dependenciaAutoriza: this.dependenciaControl?.value
+          });
+        }
       }
     });
   }
