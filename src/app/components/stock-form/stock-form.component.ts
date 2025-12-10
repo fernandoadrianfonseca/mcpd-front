@@ -29,14 +29,10 @@ import { ReporteUtilsService } from '../../services/utils/reporte-utils.service'
 import { StockCategoria } from '../../models/stock-categoria.model';
 import { StockProducto } from '../../models/stock-producto.model';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartData, ChartOptions, ChartType } from 'chart.js';
-import {
-  Chart,
-  DoughnutController,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js';
+import { ChartData, ChartOptions } from 'chart.js';
+import {Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Workbook } from 'exceljs';
+import { saveAs } from 'file-saver';
 
 Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
@@ -1601,8 +1597,95 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     }, 0);
   }
 
-  exportExcel() {
-    console.log("Exportando Excel...");
+  exportarExcel() {
+    const workbook = new Workbook();
+    const sheet = workbook.addWorksheet('Stock');
+
+    // Encabezados
+    sheet.addRow([
+      "Categoría",
+      "Producto",
+      "Detalle",
+      "Cantidad",
+      "Tipo",
+      "Cantidad Disponible",
+      "Cantidad Custodia",
+      "Marca",
+      "Modelo",
+      "Consumible",
+      "Con Devolución"
+    ]);
+
+    // Estilo encabezados
+    sheet.getRow(1).eachCell(cell => {
+      cell.font = { bold: true };
+      cell.border = {
+        top: { style: "thin" },
+        left: { style: "thin" },
+        bottom: { style: "thin" },
+        right: { style: "thin" }
+      };
+    });
+
+    // Datos
+    this.dataSource.data.forEach(stock => {
+      sheet.addRow([
+        stock.categoriaNombre,
+        stock.productoNombre,
+        stock.detalle,
+        stock.cantidad,
+        stock.tipo,
+        stock.cantidad - stock.cantidadCustodia,
+        stock.consumible
+          ? "-"
+          : (stock.cantidadCustodiaLegajo ?? stock.cantidadCustodia),
+        stock.marca,
+        stock.modelo,
+        stock.consumible ? "Sí" : "No",
+        stock.conDevolucion ? "Sí" : "No"
+      ]);
+    });
+
+    // Ajustar ancho automático de columnas
+    sheet.columns?.forEach((_, i) => {
+      const column = sheet.getColumn(i + 1);
+
+      let maxLength = 10;
+
+      column.eachCell({ includeEmpty: true }, (cell) => {
+        const value = cell.value ? cell.value.toString() : '';
+        maxLength = Math.max(maxLength, value.length);
+      });
+
+      column.width = maxLength + 2;
+    });
+
+    //Nombre Archivo
+
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const fecha =
+      `${now.getFullYear()}-` +
+      `${pad(now.getMonth() + 1)}-` +
+      `${pad(now.getDate())}-` +
+      `${pad(now.getHours())}-` +
+      `${pad(now.getMinutes())}-` +
+      `${pad(now.getSeconds())}`;
+
+    const legajo = this.legajoCustodia ?? 'sin-legajo';
+    const nombre = (this.menuData.empleado.nombre ?? 'sin-nombre')
+      .replace(/\s+/g, "_");
+
+    const fileName = `stock-en-custodia-${legajo}-${nombre}-${fecha}.xlsx`;
+
+    // Generar
+    workbook.xlsx.writeBuffer().then(buffer => {
+      saveAs(
+        new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        fileName
+      );
+    });
   }
 
   exportPdf() {
