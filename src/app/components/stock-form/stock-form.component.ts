@@ -585,20 +585,30 @@ export class StockFormComponent implements OnInit, AfterViewInit {
       : 'Operación';
   
     const legajoText = this.modoTransferir ? '' : ` A Empleado Legajo: ${this.menuData.empleado.legajo}`;
+
+    const fieldsBase = [{ name: 'cantidad', label: `Cantidad a ${tituloAccion}`, type: 'number', required: true },
+                        { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+                        { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false,stockId: stock.id,
+                          modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo },
+                        { name: 'codigo', label: 'Codigos', type: 'serie-selector', required: false, stockId: stock.id, 
+                          modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo },
+                        { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'serie-selector', required: false, stockId: stock.id,
+                          modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo }];
+
+    const fieldsFiltrados =
+      stock.tipo !== 'Dotacion Fija'
+        ? fieldsBase.filter(f =>
+            f.name !== 'numeroDeSerie' &&
+            f.name !== 'codigo' &&
+            f.name !== 'codigoAntiguo'
+          )
+        : fieldsBase;
+
     const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
       width: '820px',
       data: {
         title: `${tituloAccion} Producto ${stock.productoNombre} ${stock.detalle ?? ''}${legajoText}`,
-        fields: [
-          { name: 'cantidad', label: `Cantidad a ${tituloAccion}`, type: 'number', required: true },
-          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false,stockId: stock.id,
-            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo },
-          { name: 'codigo', label: 'Codigos', type: 'serie-selector', required: false, stockId: stock.id, 
-            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo },
-          { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'serie-selector', required: false, stockId: stock.id,
-            modo: this.modoAsignar ? 'asignar' : this.modoTransferir ? 'transferir' : 'quitar', legajoEmpleado: this.menuData.empleado.legajo }
-        ]
+        fields: fieldsFiltrados
       }
     });
   
@@ -733,6 +743,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
           item.ids = [...(item.ids ?? []), ...nuevosIds];
           item.codigos = [...(item.codigos ?? []), ...nuevosCodigos];
 
+          if (item.stock.tipo !== 'Dotacion Fija') {
+            item.codigos = [];
+          }
+
         } catch (err) {
           console.error("Error obteniendo códigos libres", err);
         }
@@ -765,9 +779,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     //OBTENER TODOS LOS IDS INCLUIDOS LOS FALTANTES Y LOS CODIGOS
     if (items.length && legajoCustodia) {
       this.stockService.asignarCustodia(items, legajoCustodia, legajoCarga).subscribe(() => {
+
         this.stockService.showSuccessMessage('Stock Asignado Con Éxito', 5);
-        this.utils.guardarLog(this.menuData?.empleadoLogueado?.nombre, 'Stock Asignado ' + JSON.stringify(items) + ' ' + legajoCustodia + ' ' + legajoCarga);
-  
+        this.utils.guardarLog(
+          this.menuData?.empleadoLogueado?.nombre,
+          'Stock Asignado ' + JSON.stringify(items) + ' ' + legajoCustodia + ' ' + legajoCarga
+        );
+
         // Separar consumibles y no consumibles
         const consumibles = this.stockParaOperar.filter(i => i.stock.consumible);
         const noConsumibles = this.stockParaOperar.filter(i => !i.stock.consumible);
@@ -775,53 +793,35 @@ export class StockFormComponent implements OnInit, AfterViewInit {
         // Dividir los no consumibles con y sin devolución
         const conFecha = noConsumibles.filter(i => i.stock.conDevolucion);
         const sinFecha = noConsumibles.filter(i => !i.stock.conDevolucion);
-  
-        // Generar reporte de consumibles
+
+        // Parámetros base reutilizables
+        const baseParams = {
+          generaReporteLegajo: legajoCarga,
+          generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
+          legajoEmpleado: legajoCustodia,
+          nombreEmpleado: nombre,
+          legajoEmpleadoEntrega: legajoCarga,
+          nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
+          legajoEmpleadoRecibe: legajoCarga,
+          nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
+          dependenciaAutoriza: this.dependenciaControl.value
+        };
+
+        // Reporte consumibles
         if (consumibles.length) {
-          this.reporteUtils.generarReporteAsignacion(consumibles, 'acta-entrega-patrimonial', {
-            generaReporteLegajo: legajoCarga,
-            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
-            legajoEmpleado: legajoCustodia,
-            nombreEmpleado: nombre,
-            legajoEmpleadoEntrega: legajoCarga,
-            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
-            legajoEmpleadoRecibe: legajoCarga,
-            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
-            dependenciaAutoriza: this.dependenciaControl.value
-          });
+          this.reporteUtils.generarReporteAsignacion(consumibles,'acta-entrega-patrimonial',baseParams);
         }
 
-        // Generar reporte de no consumibles sin devolución
+        // Reporte no consumibles sin devolución
         if (sinFecha.length) {
-          this.reporteUtils.generarReporteAsignacion(sinFecha, 'acta-alta-patrimonial', {
-            generaReporteLegajo: legajoCarga,
-            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
-            legajoEmpleado: legajoCustodia,
-            nombreEmpleado: nombre,
-            legajoEmpleadoEntrega: legajoCarga,
-            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
-            legajoEmpleadoRecibe: legajoCarga,
-            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
-            dependenciaAutoriza: this.dependenciaControl.value
-          });
+          this.reporteUtils.generarReporteAsignacion(sinFecha, 'acta-alta-patrimonial', baseParams);
         }
 
-        // Generar reporte de no consumibles con devolución
+        // Reporte no consumibles con devolución
         if (conFecha.length) {
-          this.reporteUtils.generarReporteAsignacion(conFecha, 'acta-alta-patrimonial-confecha', {
-            generaReporteLegajo: legajoCarga,
-            generaReporteNombre: this.menuData?.empleadoLogueado?.nombre,
-            legajoEmpleado: legajoCustodia,
-            nombreEmpleado: nombre,
-            legajoEmpleadoEntrega: legajoCarga,
-            nombreEmpleadoEntrega: this.menuData?.empleadoLogueado?.nombre,
-            legajoEmpleadoRecibe: legajoCarga,
-            nombreEmpleadoRecibe: this.menuData?.empleadoLogueado?.nombre,
-            dependenciaAutoriza: this.dependenciaControl.value,
-            fechaDevolucion: fechaDevolucion
-          });
+          this.reporteUtils.generarReporteAsignacion(conFecha, 'acta-alta-patrimonial-confecha', {...baseParams, fechaDevolucion: fechaDevolucion});
         }
-  
+
         // Limpiar selección y recargar stock
         this.stockParaOperar = [];
         this.stockParaOperarDS.data = [];
@@ -886,6 +886,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
           item.ids = [...(item.ids ?? []), ...nuevosIds];
           item.codigos = [...(item.codigos ?? []), ...nuevosCodigos];
+
+          if (item.stock.tipo !== 'Dotacion Fija') {
+            item.codigos = [];
+          }
 
         } catch (err) {
           console.error("Error obteniendo códigos libres", err);
@@ -995,6 +999,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
           item.ids = [...(item.ids ?? []), ...nuevosIds];
           item.codigos = [...(item.codigos ?? []), ...nuevosCodigos];
+
+          if (item.stock.tipo !== 'Dotacion Fija') {
+            item.codigos = [];
+          }
 
         } catch (err) {
           console.error("Error obteniendo códigos libres", err);
@@ -1117,20 +1125,30 @@ export class StockFormComponent implements OnInit, AfterViewInit {
   }
 
   abrirModalAgregarStock(stock: ProductosStock): void {
+
+    let fields = [
+      { name: 'cantidad', label: 'Cantidad', type: 'number', required: true },
+      { name: 'remito', label: 'Remito', type: 'text', required: false },
+      { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+      { name: 'numeroDeSerie', label: 'Números de Serie', type: 'text', required: false, multiple: true },
+      { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'text', required: false, multiple: true }
+    ];
+
+    if (stock.tipo !== 'Dotacion Fija') {
+      fields = fields.filter(f =>
+        f.name !== 'numeroDeSerie' &&
+        f.name !== 'codigoAntiguo'
+      );
+    }
+
     const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
       width: '820px',
       data: {
         title: `Agregar Stock a: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
-        fields: [
-          { name: 'cantidad', label: 'Cantidad', type: 'number', required: true },
-          { name: 'remito', label: 'Remito', type: 'text', required: false },
-          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'text', required: false, multiple: true },
-          { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'text', required: false, multiple: true }
-        ]
+        fields
       }
     });
-  
+    
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         const cantidadAdicional = +result.cantidad;
@@ -1205,18 +1223,28 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
   async abrirModalBajaStock(stock: ProductosStock): Promise<void> {
 
+    const baseFields = [
+      { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
+      { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
+      { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
+      { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' },
+      { name: 'codigo', label: 'Codigos', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' },
+      { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
+    ];
+
+    const filteredFields = (stock.tipo !== 'Dotacion Fija')
+      ? baseFields.filter(f =>
+          f.name !== 'numeroDeSerie' &&
+          f.name !== 'codigo' &&
+          f.name !== 'codigoAntiguo'
+        )
+      : baseFields;
+
     const dialogRef = this.dialog.open(DynamicFormDialogComponent, {
       width: '820px',
       data: {
         title: `Dar De Baja Stock: ${stock.productoNombre} ${stock.detalle} ${stock.marca ?? ''}`,
-        fields: [
-          { name: 'cantidad', label: 'Cantidad a Dar de Baja', type: 'number', required: true },
-          { name: 'motivoBaja', label: 'Motivo De Baja', type: 'text', required: true },
-          { name: 'observaciones', label: 'Observaciones', type: 'text', required: false },
-          { name: 'numeroDeSerie', label: 'Números de Serie', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' },
-          { name: 'codigo', label: 'Codigos', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' },
-          { name: 'codigoAntiguo', label: 'Codigos Antiguos', type: 'serie-selector', required: false, stockId: stock.id, modo: 'asignar' }
-        ]
+        fields: filteredFields
       }
     });
 
@@ -1301,6 +1329,10 @@ export class StockFormComponent implements OnInit, AfterViewInit {
 
             uniqueSelectedIds = [...uniqueSelectedIds, ...nuevosIds];
             uniqueSelectedCodes = [...uniqueSelectedCodes, ...nuevosCodigos];
+
+            if (stock.tipo !== 'Dotacion Fija') {
+              uniqueSelectedCodes = [];
+            }
 
           } catch (err) {
             console.error("Error obteniendo códigos libres", err);
@@ -1567,5 +1599,13 @@ export class StockFormComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
           this.chart?.update();
     }, 0);
+  }
+
+  exportExcel() {
+    console.log("Exportando Excel...");
+  }
+
+  exportPdf() {
+    console.log("Exportando PDF...");
   }
 }
